@@ -690,6 +690,48 @@
             }, 100);
         }
 
+        // 대원 명단 합집합 병합 및 접속 순 정렬 함수 (누락 복구)
+        function mergeMembers(listA = [], listB = []) {
+            const map = new Map();
+            [...listA, ...listB].forEach(item => {
+                if (!item) return;
+                const obj = typeof item === 'string' 
+                    ? { name: item, joinedAt: Date.now() } 
+                    : { name: item.name, joinedAt: item.joinedAt || Date.now() };
+                if (!map.has(obj.name) || map.get(obj.name).joinedAt > obj.joinedAt) {
+                    map.set(obj.name, obj);
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => 
+                a.joinedAt !== b.joinedAt ? a.joinedAt - b.joinedAt : a.name.localeCompare(b.name)
+            );
+        }
+
+        // 라운드별 4단계 동적 역할 순환 공식 (누락 복구)
+        function getStageActorIndex(stage, teamSize, problemCount = 1) {
+            if (teamSize <= 1) return 0;
+            const shift = (Math.max(1, problemCount) - 1) % teamSize;
+            return (stage + shift) % teamSize;
+        }
+
+        // 대원별 포지션 명칭 생성 함수 (누락 복구)
+        function getRoleDescription(memberIndex, teamSize, problemCount = 1) {
+            if (teamSize <= 1) return "올라운드 수석 소나관 (전 구역 단독 조준)";
+            const stageNames = [
+                "① 사분면 색출",
+                "② X축 조준선",
+                "③ Y축 유도선",
+                "④ 어뢰 투하관 🚀"
+            ];
+            const myAssignedStages = [];
+            for (let s = 0; s < 4; s++) {
+                if (getStageActorIndex(s, teamSize, problemCount) === memberIndex) {
+                    myAssignedStages.push(stageNames[s]);
+                }
+            }
+            return `${memberIndex + 1}번 대원 [${myAssignedStages.join(' + ')}]`;
+        }
+
         function createInitialRoomData() {
             return {
                 blueShips: 5,
@@ -760,12 +802,18 @@
                 }
             } catch (e) {}
 
+            // 네트워크 지연 시 멈춤을 방지하는 2초 타임아웃 래퍼
+            const withTimeout = (p, ms = 2000) => Promise.race([
+                p,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+            ]);
+
             let initialData = null;
 
             try {
                 if (!useFallback && db) {
                     const roomRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'stealth_sonar_rooms'), currentRoomCode);
-                    const snap = await getDoc(roomRef);
+                    const snap = await withTimeout(getDoc(roomRef));
 
                     if (snap.exists()) {
                         initialData = snap.data();
@@ -780,7 +828,7 @@
                     }
 
                     initialData.updatedAt = Date.now();
-                    await setDoc(roomRef, initialData, { merge: true });
+                    await withTimeout(setDoc(roomRef, initialData, { merge: true }));
                     startFirestoreListener(roomRef);
                 }
             } catch (err) {
