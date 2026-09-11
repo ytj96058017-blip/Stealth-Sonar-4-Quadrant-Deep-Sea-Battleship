@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스텔스 소나: 4분면 심해 배틀쉽 - 중1 수학 실시간 좌표 배틀</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Jua', 'Inter', sans-serif; }
+        .font-sonar { font-family: 'Black Han Sans', sans-serif; }
+        .deep-sea-bg {
+            background: radial-gradient(circle at 50% 25%, #042f2e 0%, #021a1f 55%, #010b10 100%);
+        }
+        .sonar-pulse-box {
+            animation: sonarPulse 2s infinite ease-in-out;
+        }
+        @keyframes sonarPulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(20, 184, 166, 0.4), inset 0 0 10px rgba(20, 184, 166, 0.2); }
+            50% { box-shadow: 0 0 35px rgba(20, 184, 166, 0.85), inset 0 0 20px rgba(20, 184, 166, 0.4); }
+        }
+        .danger-siren {
+            animation: dangerAlert 0.8s infinite alternate;
+        }
+        @keyframes dangerAlert {
+            from { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.2); }
+            to { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.3); }
+        }
+        @keyframes subFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .float-anim {
+            animation: subFloat 2.6s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="deep-sea-bg text-white min-h-screen flex flex-col justify-between p-3 md:p-6 select-none">
+
+    <!-- Header Banner -->
+    <header class="text-center mb-3">
+        <div class="flex items-center justify-center gap-3">
+            <span class="text-3xl md:text-5xl float-anim">🛰️</span>
+            <h1 class="text-3xl md:text-5xl font-sonar tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-emerald-300 to-cyan-400 drop-shadow-lg">
+                스텔스 소나: 4분면 심해 배틀쉽
+            </h1>
+            <span class="text-3xl md:text-5xl float-anim">🚢</span>
+        </div>
+        <p class="text-xs md:text-sm text-teal-200 mt-1">
+            중학교 1학년 좌표평면·사분면·정비례·반비례 4인 협동 실시간 소나 조준 격침전
+        </p>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="max-w-5xl w-full mx-auto flex-1 flex flex-col justify-center">
+
+        <!-- 1. Lobby Screen -->
+        <div id="lobby-screen" class="bg-slate-900/90 border-2 border-teal-500/60 rounded-3xl p-6 md:p-10 shadow-2xl backdrop-blur-xl">
+            <div class="text-center mb-8">
+                <div class="inline-block px-4 py-1.5 rounded-full bg-teal-950 border border-teal-400/50 text-teal-300 text-xs font-bold mb-2">
+                    ⚓ 심해 작전 사령부
+                </div>
+                <h2 class="text-2xl md:text-3xl font-sonar text-teal-300 mb-2">함대 배틀룸 참전 등록</h2>
+                <p class="text-xs md:text-sm text-slate-300">
+                    같은 배틀룸 코드를 입력한 친구들과 청해(블루 소나) / 홍해(레드 헌터) 함대를 결성하여 적의 스텔스 전함 3척을 먼저 격침하세요!
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                <div class="bg-slate-950/80 p-5 rounded-2xl border border-slate-700">
+                    <label class="block text-sm font-semibold mb-2 text-teal-300 flex items-center gap-2">
+                        <span>👤</span> 소나 항해관 닉네임
+                    </label>
+                    <input type="text" id="player-name" placeholder="예: 심해항해사 서진" maxlength="10"
+                           class="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-lg focus:outline-none focus:border-teal-400">
+                </div>
+                <div class="bg-slate-950/80 p-5 rounded-2xl border border-slate-700">
+                    <label class="block text-sm font-semibold mb-2 text-teal-300 flex items-center gap-2">
+                        <span>🔑</span> 배틀룸 코드 (방 비밀번호)
+                    </label>
+                    <input type="text" id="room-code" placeholder="예: sonar101" maxlength="12"
+                           class="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-lg focus:outline-none focus:border-teal-400">
+                </div>
+            </div>
+
+            <!-- Team Select Buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <button onclick="joinTeam('blue')" class="group relative py-5 rounded-2xl font-sonar text-xl bg-gradient-to-r from-cyan-700 to-blue-600 hover:from-cyan-600 hover:to-blue-500 transition-all duration-200 shadow-xl border-2 border-cyan-300 flex items-center justify-center gap-3 transform hover:-translate-y-1">
+                    <span class="text-3xl">🔵</span>
+                    <span>청해 함대 (블루 소나) 참전</span>
+                </button>
+                <button onclick="joinTeam('red')" class="group relative py-5 rounded-2xl font-sonar text-xl bg-gradient-to-r from-rose-700 to-red-600 hover:from-rose-600 hover:to-red-500 transition-all duration-200 shadow-xl border-2 border-rose-400 flex items-center justify-center gap-3 transform hover:-translate-y-1">
+                    <span class="text-3xl">🔴</span>
+                    <span>홍해 함대 (레드 헌터) 참전</span>
+                </button>
+            </div>
+
+            <div id="lobby-status" class="text-center text-sm text-teal-300 font-bold min-h-[24px]">
+                함대를 선택하면 음향 소나를 동기화하고 해저 격전지로 진입합니다!
+            </div>
+        </div>
+
+        <!-- 2. Battle Screen -->
+        <div id="battle-screen" class="hidden flex flex-col gap-4">
+            
+            <!-- Fleet Status HUD: 3 Warships Per Team -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/90 p-4 rounded-3xl border border-slate-700 shadow-xl">
+                <!-- Blue Fleet -->
+                <div class="flex flex-col gap-2 p-3.5 rounded-2xl bg-cyan-950/50 border-2 border-cyan-500/50">
+                    <div class="flex justify-between items-center text-sm font-bold">
+                        <span class="text-cyan-300 font-sonar text-base md:text-lg flex items-center gap-2">
+                            <span>🔵</span> 청해 함대 전함 (잔여: <span id="blue-ships-count">3</span>/3척)
+                        </span>
+                        <div id="blue-ships-icons" class="flex items-center gap-1.5 text-xl">
+                            <span>🚢</span><span>🚢</span><span>🚢</span>
+                        </div>
+                    </div>
+                    <div id="blue-members" class="text-xs text-cyan-200 truncate">소나 대원: 대기 중...</div>
+                </div>
+
+                <!-- Red Fleet -->
+                <div class="flex flex-col gap-2 p-3.5 rounded-2xl bg-rose-950/50 border-2 border-rose-500/50">
+                    <div class="flex justify-between items-center text-sm font-bold">
+                        <span class="text-rose-300 font-sonar text-base md:text-lg flex items-center gap-2">
+                            <span>🔴</span> 홍해 함대 전함 (잔여: <span id="red-ships-count">3</span>/3척)
+                        </span>
+                        <div id="red-ships-icons" class="flex items-center gap-1.5 text-xl">
+                            <span>🚢</span><span>🚢</span><span>🚢</span>
+                        </div>
+                    </div>
+                    <div id="red-members" class="text-xs text-rose-200 truncate">소나 대원: 대기 중...</div>
+                </div>
+            </div>
+
+            <!-- Coordinate Plane Sonar Radar Canvas -->
+            <div class="relative w-full h-72 md:h-80 bg-slate-950 rounded-3xl border-2 border-teal-500/50 overflow-hidden shadow-2xl">
+                <canvas id="radar-canvas" class="w-full h-full block"></canvas>
+                
+                <!-- Crosshair Coordinate HUD -->
+                <div class="absolute top-2 left-3 px-3 py-1 bg-slate-950/80 border border-teal-400/40 rounded-full text-xs font-mono text-teal-300 z-10 flex items-center gap-2 shadow">
+                    <span>📡 레이더 스캔:</span>
+                    <span id="crosshair-coord-label" class="font-bold text-yellow-300">(?, ?) 미조준</span>
+                </div>
+
+                <div class="absolute top-2 right-3 px-3 py-1 bg-slate-950/80 border border-yellow-400/40 rounded-full text-[11px] font-sonar text-yellow-300 z-10 flex items-center gap-1 shadow">
+                    <span>🎯</span> 3척 먼저 격침 시 승리
+                </div>
+            </div>
+
+            <!-- Cooperative Sonar Pipeline Workspace -->
+            <div id="action-box" class="relative bg-slate-900/95 border-2 border-teal-500/70 rounded-3xl p-5 md:p-6 shadow-2xl flex flex-col items-center text-center sonar-pulse-box">
+                
+                <!-- Badges -->
+                <div class="flex flex-wrap items-center justify-center gap-2 mb-3">
+                    <span id="my-team-badge" class="text-xs px-3.5 py-1.5 rounded-full font-bold">소속 함대</span>
+                    <span id="my-role-badge" class="text-xs px-3.5 py-1.5 bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 rounded-full font-bold">내 포지션</span>
+                    <span id="target-ship-badge" class="text-xs px-3.5 py-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-full font-bold">
+                        🎯 타겟: <span id="current-target-name">적 스텔스 순양함 #1</span>
+                    </span>
+                </div>
+
+                <!-- Mission Formula & Clue Display -->
+                <div class="w-full max-w-2xl bg-slate-950 border-2 border-teal-400/80 rounded-2xl p-4 md:p-5 shadow-inner mb-4">
+                    <div class="text-xs font-semibold text-teal-300 mb-1 tracking-wider uppercase flex items-center justify-center gap-1.5">
+                        <span>🧭</span> 심해 스텔스 음파 해독 콘솔
+                    </div>
+                    <div id="mission-clue-display" class="text-lg md:text-2xl font-sonar text-yellow-300 tracking-wide leading-relaxed">
+                        소나 신호 수신 중...
+                    </div>
+                </div>
+
+                <!-- Input Controls -->
+                <div class="w-full max-w-xl flex flex-col items-center gap-3">
+                    <div id="step-instruction" class="text-sm md:text-base font-bold text-teal-200 min-h-[44px] flex items-center justify-center px-2">
+                        단계 안내 로딩 중...
+                    </div>
+
+                    <!-- Input Mode 1: Quadrant Buttons (Step 0) -->
+                    <div id="quadrant-buttons-control" class="hidden grid grid-cols-2 gap-3 w-full max-w-md">
+                        <button onclick="submitQuadrantStep(1)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
+                            제1사분면 (+, +)
+                        </button>
+                        <button onclick="submitQuadrantStep(2)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
+                            제2사분면 (-, +)
+                        </button>
+                        <button onclick="submitQuadrantStep(3)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
+                            제3사분면 (-, -)
+                        </button>
+                        <button onclick="submitQuadrantStep(4)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
+                            제4사분면 (+, -)
+                        </button>
+                    </div>
+
+                    <!-- Input Mode 2: Number Input (Step 1, 2) -->
+                    <div id="number-input-control" class="hidden flex flex-col sm:flex-row items-center justify-center gap-2 w-full max-w-md">
+                        <input type="number" id="step-number-input" placeholder="좌표 숫자 입력" 
+                               class="w-full sm:w-48 px-4 py-3 rounded-xl bg-slate-950 border-2 border-teal-400 text-white font-bold text-xl text-center focus:outline-none focus:ring-2 focus:ring-teal-300"
+                               onkeydown="if(event.key==='Enter') submitCoordinateStep()">
+                        <button id="submit-coordinate-btn" onclick="submitCoordinateStep()" 
+                                class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-sonar text-lg rounded-xl transition shadow-lg flex items-center justify-center gap-1.5">
+                            <span>📡</span><span>조준선 고정</span>
+                        </button>
+                    </div>
+
+                    <!-- Input Mode 3: Torpedo Launch Fire Button (Step 3) -->
+                    <div id="torpedo-launch-control" class="hidden flex flex-col items-center gap-2 w-full max-w-md">
+                        <button onclick="launchTorpedoStep()" class="w-full py-4 bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 hover:from-rose-500 hover:to-red-400 text-white font-sonar text-2xl rounded-2xl shadow-xl border-2 border-amber-300 active:scale-95 transition animate-pulse flex items-center justify-center gap-2">
+                            <span>🚀</span><span>심해 중어뢰 발사 (FIRE!)</span>
+                        </button>
+                        <span class="text-xs text-amber-200 font-semibold">최종 조준점 교차 확인 완료! 어뢰를 투하하세요!</span>
+                    </div>
+
+                    <!-- Waiting Notice for Other Members -->
+                    <div id="waiting-notice" class="hidden p-3 rounded-xl bg-slate-950/80 border border-slate-700 text-xs md:text-sm text-teal-200">
+                        ⏳ 현재 <span id="current-actor-name" class="font-bold text-yellow-300"></span> 대원이 소나를 조준 중입니다. 좌표를 함께 계산해 주세요!
+                    </div>
+                </div>
+
+                <!-- 4-Stage Pipeline Tracker Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-2xl mt-5 pt-4 border-t border-slate-800 text-xs font-semibold">
+                    <div id="stage-card-0" class="p-2.5 rounded-xl border transition-all text-slate-400 bg-slate-950/60 border-slate-800">
+                        ① 사분면 색출관
+                    </div>
+                    <div id="stage-card-1" class="p-2.5 rounded-xl border transition-all text-slate-400 bg-slate-950/60 border-slate-800">
+                        ② X축 조준사
+                    </div>
+                    <div id="stage-card-2" class="p-2.5 rounded-xl border transition-all text-slate-400 bg-slate-950/60 border-slate-800">
+                        ③ Y축 유도사
+                    </div>
+                    <div id="stage-card-3" class="p-2.5 rounded-xl border transition-all text-slate-400 bg-slate-950/60 border-slate-800">
+                        ④ 어뢰 투하관 🚀
+                    </div>
+                </div>
+
+                <!-- Feedback & Radio -->
+                <div id="battle-feedback" class="text-sm font-bold min-h-[24px] mt-3"></div>
+
+                <div class="flex flex-wrap items-center justify-center gap-2 mt-2">
+                    <button onclick="sendQuickCheer('부호(+, -) 먼저 확인해봐! 🧭')" class="px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-teal-500/40 rounded-lg text-xs text-teal-200">
+                        🧭 부호(+, -) 확인!
+                    </button>
+                    <button onclick="sendQuickCheer('정비례는 y=ax, 반비례는 y=a/x! 📐')" class="px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-teal-500/40 rounded-lg text-xs text-teal-200">
+                        📐 관계식에 x 대입!
+                    </button>
+                    <button onclick="sendQuickCheer('조준 완료! 어뢰 투하해! 🚀')" class="px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-teal-500/40 rounded-lg text-xs text-teal-200">
+                        🚀 조준 완료! 어뢰 발사!
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border-2 border-teal-400 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
+            <h4 id="modal-title" class="text-2xl font-sonar text-teal-300 mb-2">사령부 통신</h4>
+            <p id="modal-body" class="text-sm text-slate-200 mb-6">내용</p>
+            <button onclick="closeCustomModal()" class="bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 font-sonar px-6 py-2.5 rounded-xl transition shadow-lg hover:scale-105">
+                확인
+            </button>
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl hidden flex items-center justify-center z-50 p-4">
+        <div class="relative bg-gradient-to-b from-slate-900 via-teal-950 to-slate-950 border-4 border-teal-400 rounded-3xl p-6 md:p-8 max-w-lg w-full text-center shadow-[0_0_60px_rgba(20,184,166,0.6)] overflow-hidden">
+            <div class="text-6xl md:text-7xl mb-2 float-anim">🏆</div>
+            <div class="inline-block px-4 py-1 rounded-full bg-teal-400 text-slate-950 font-sonar text-xs tracking-wider mb-2">
+                🌊 DEEP SEA FLEET GRAND VICTORY
+            </div>
+            <h3 id="victory-team-title" class="text-3xl md:text-4xl font-sonar text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-emerald-200 to-teal-400 mb-3">
+                청해 함대 완승!
+            </h3>
+            <p id="victory-desc" class="text-xs md:text-sm text-teal-200 mb-5 leading-relaxed">
+                적의 스텔스 전함 3척을 완벽한 4분면 해석과 함수 조준으로 모두 수장시켰습니다!
+            </p>
+
+            <div class="bg-slate-950/80 border border-slate-700 rounded-2xl p-4 mb-6 text-left">
+                <div class="text-xs text-yellow-300 font-bold mb-2 flex items-center gap-1.5">
+                    <span>👑</span> 영웅 소나 함대 크루
+                </div>
+                <div id="victory-members-list" class="text-sm font-bold text-white mb-3">
+                    대원 목록
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-center text-xs font-sonar border-t border-slate-800 pt-3">
+                    <div class="bg-slate-900/80 p-2 rounded-xl">
+                        <span class="text-slate-400 block text-[10px]">격침 성공</span>
+                        <span class="text-teal-300 text-sm">3척 전탄 명중</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2 rounded-xl">
+                        <span class="text-slate-400 block text-[10px]">작전 수행 타임</span>
+                        <span id="victory-total-time" class="text-yellow-300 text-sm">00.0초</span>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="location.reload()" class="w-full py-4 bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-500 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-sonar text-lg rounded-2xl shadow-xl transform active:scale-95 transition">
+                ⚓ 새로운 해역 배틀 재도전
+            </button>
+        </div>
+    </div>
+
+    <!-- Web Audio API Sound Synthesizer -->
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTone(freq, type, duration, gainVal = 0.15) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+            sonarPing() {
+                this.init();
+                this.playTone(880, 'sine', 0.4, 0.25);
+                setTimeout(() => this.playTone(1320, 'sine', 0.5, 0.2), 80);
+            }
+            torpedoLaunch() {
+                this.init();
+                this.playTone(140, 'sawtooth', 0.25, 0.3);
+                setTimeout(() => this.playTone(260, 'triangle', 0.35, 0.25), 60);
+                setTimeout(() => this.playTone(420, 'sine', 0.4, 0.2), 120);
+            }
+            shipExplosion() {
+                this.init();
+                this.playTone(90, 'sawtooth', 0.6, 0.4);
+                setTimeout(() => this.playTone(60, 'triangle', 0.7, 0.35), 70);
+            }
+            success() {
+                this.init();
+                this.playTone(587.33, 'triangle', 0.15, 0.2); // D5
+                setTimeout(() => this.playTone(880.00, 'triangle', 0.25, 0.25), 100); // A5
+            }
+            error() {
+                this.init();
+                this.playTone(180, 'sawtooth', 0.2, 0.3);
+                setTimeout(() => this.playTone(130, 'sawtooth', 0.25, 0.3), 90);
+            }
+            victoryFanfare() {
+                this.init();
+                const notes = [
+                    { f: 587.33, d: 0.18 },
+                    { f: 739.99, d: 0.18 },
+                    { f: 880.00, d: 0.22 },
+                    { f: 1174.66, d: 0.5 },
+                    { f: 880.00, d: 0.18 },
+                    { f: 1174.66, d: 0.8 }
+                ];
+                let delay = 0;
+                notes.forEach(n => {
+                    setTimeout(() => this.playTone(n.f, 'triangle', n.d, 0.3), delay);
+                    delay += n.d * 1000 + 40;
+                });
+            }
+        }
+        const sfx = new SoundFX();
+    </script>
+
+    <!-- Main Game Logic and Firebase Synchronizer -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Reusing existing Firebase config with dedicated collection: 'stealth_sonar_rooms'
+        const firebaseConfig = {
+            apiKey: "AIzaSyChxrOzoTxFMy_BvkvNZLXAp1oRvN7Fb1g",
+            authDomain: "focus-tower-defense.firebaseapp.com",
+            projectId: "focus-tower-defense",
+            storageBucket: "focus-tower-defense.firebasestorage.app",
+            messagingSenderId: "519329169002",
+            appId: "1:519329169002:web:401534fe04b6ad39131413",
+            measurementId: "G-G2JRKQ2KXY"
+        };
+
+        let db = null;
+        let useFallback = false;
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            const auth = getAuth(app);
+            signInAnonymously(auth).catch(() => { useFallback = true; });
+        } catch (e) {
+            useFallback = true;
+        }
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'stealth-sonar-battleship-default';
+        let currentUserName = '';
+        let currentRoomCode = '';
+        let myTeam = '';
+        let unsubscribeRoom = null;
+        let lastKnownRoomData = null;
+        let bc = null;
+
+        let missionStartTime = Date.now();
+        let prevWasMyTurn = false;
+        let battleEnded = false;
+        const recentCluesSet = new Set();
+
+        /*
+          Procedural Math Engine for Coordinates, Quadrants, and Proportionality (Middle School 1st Grade)
+          Grid range: x, y in [-5, 5] (non-zero)
+          Step 0: Quadrant Selection (1, 2, 3, 4) based on sign clues
+          Step 1: X-coordinate solution from symmetry / distance / translation clue
+          Step 2: Y-coordinate solution from Direct Proportionality (y = ax) or Inverse Proportionality (y = a/x)
+          Step 3: Torpedo Launch and Confirmation
+        */
+        function generateSonarMission() {
+            let mission = null;
+            let attempts = 0;
+
+            while (attempts < 100) {
+                attempts++;
+                const quad = Math.floor(Math.random() * 4) + 1; // 1, 2, 3, 4
+                let x = 0, y = 0;
+
+                // Sign determination based on quadrant
+                if (quad === 1) { // (+, +)
+                    x = Math.floor(Math.random() * 4) + 1;
+                    y = Math.floor(Math.random() * 4) + 1;
+                } else if (quad === 2) { // (-, +)
+                    x = (Math.floor(Math.random() * 4) + 1) * -1;
+                    y = Math.floor(Math.random() * 4) + 1;
+                } else if (quad === 3) { // (-, -)
+                    x = (Math.floor(Math.random() * 4) + 1) * -1;
+                    y = (Math.floor(Math.random() * 4) + 1) * -1;
+                } else { // (+, -)
+                    x = Math.floor(Math.random() * 4) + 1;
+                    y = (Math.floor(Math.random() * 4) + 1) * -1;
+                }
+
+                // Step 0: Quadrant Sign Clue
+                const signClueType = Math.floor(Math.random() * 3);
+                let quadClue = "";
+                if (signClueType === 0) {
+                    quadClue = x > 0 && y > 0 ? "x > 0 이고 y > 0" :
+                               x < 0 && y > 0 ? "x < 0 이고 y > 0" :
+                               x < 0 && y < 0 ? "x < 0 이고 y < 0" : "x > 0 이고 y < 0";
+                } else if (signClueType === 1) {
+                    quadClue = (x * y > 0) ? (x > 0 ? "xy > 0 이며 x + y > 0" : "xy > 0 이며 x + y < 0")
+                                           : (x > 0 ? "xy < 0 이며 x > y" : "xy < 0 이며 x < y");
+                } else {
+                    const qNames = ["제1사분면", "제2사분면", "제3사분면", "제4사분면"];
+                    quadClue = `점 P가 위치한 구역은 바로 [${qNames[quad - 1]}]`;
+                }
+
+                // Step 1: X-Coordinate Clue
+                const xClueType = Math.floor(Math.random() * 3);
+                let xClue = "";
+                if (xClueType === 0) {
+                    xClue = `x좌표는 y축까지의 거리가 ${Math.abs(x)}인 ${x > 0 ? '양수' : '음수'}`;
+                } else if (xClueType === 1) {
+                    const oppositeX = -x;
+                    xClue = `점 (${oppositeX}, 0)을 y축에 대하여 대칭이동한 점의 x좌표`;
+                } else {
+                    const base = x - 2;
+                    xClue = `방정식 x - (${base}) = 2 의 해`;
+                }
+
+                // Step 2: Function Proportionality Clue for Y
+                const fnType = Math.random() < 0.5 ? 'direct' : 'inverse';
+                let yClue = "";
+                let fnExpr = "";
+
+                if (fnType === 'direct') {
+                    // y = a * x => a = y / x
+                    // Ensure 'a' is a clean integer
+                    if (y % x !== 0) continue;
+                    const a = y / x;
+                    const aStr = a === 1 ? '' : (a === -1 ? '-' : `${a}`);
+                    fnExpr = `y = ${aStr}x`;
+                    yClue = `y좌표는 x와 정비례 관계식 [ ${fnExpr} ] 위의 점`;
+                } else {
+                    // y = a / x => a = x * y
+                    const a = x * y;
+                    if (Math.abs(a) > 20) continue;
+                    fnExpr = `y = ${a} / x`;
+                    yClue = `y좌표는 x와 반비례 관계식 [ y = ${a}/x ] 위의 점`;
+                }
+
+                const fullClue = `【음파 탐지】 ${quadClue} 구역에 은폐 중!`;
+
+                if (!recentCluesSet.has(fullClue)) {
+                    recentCluesSet.add(fullClue);
+                    if (recentCluesSet.size > 40) {
+                        const first = recentCluesSet.values().next().value;
+                        recentCluesSet.delete(first);
+                    }
+
+                    mission = {
+                        targetX: x,
+                        targetY: y,
+                        targetQuadrant: quad,
+                        quadClue: quadClue,
+                        xClue: xClue,
+                        yClue: yClue,
+                        fnExpr: fnExpr,
+                        fullClue: fullClue
+                    };
+                    break;
+                }
+            }
+
+            // Fallback safety mission
+            if (!mission) {
+                mission = {
+                    targetX: -3,
+                    targetY: 2,
+                    targetQuadrant: 2,
+                    quadClue: "x < 0 이고 y > 0",
+                    xClue: "y축까지의 거리가 3인 음수",
+                    yClue: "반비례 관계식 [ y = -6/x ] 위의 점",
+                    fnExpr: "y = -6/x",
+                    fullClue: "【음파 탐지】 x < 0 이고 y > 0 구역에 은폐 중!"
+                };
+            }
+            return mission;
+        }
+
+        // Deterministic member merger and stable sort
+        function mergeMembers(listA = [], listB = []) {
+            const map = new Map();
+            [...listA, ...listB].forEach(item => {
+                if (!item) return;
+                const obj = typeof item === 'string' 
+                    ? { name: item, joinedAt: Date.now() } 
+                    : { name: item.name, joinedAt: item.joinedAt || Date.now() };
+                if (!map.has(obj.name) || map.get(obj.name).joinedAt > obj.joinedAt) {
+                    map.set(obj.name, obj);
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => 
+                a.joinedAt !== b.joinedAt ? a.joinedAt - b.joinedAt : a.name.localeCompare(b.name)
+            );
+        }
+
+        // Deterministic round-robin role distribution: every problem shifts by 1
+        function getStageActorIndex(stage, teamSize, problemCount = 1) {
+            if (teamSize <= 1) return 0;
+            const shift = (Math.max(1, problemCount) - 1) % teamSize;
+            return (stage + shift) % teamSize;
+        }
+
+        function getRoleDescription(memberIndex, teamSize, problemCount = 1) {
+            if (teamSize <= 1) return "올라운드 소나 사령관 (전 구역 단독 탐색)";
+            const stageNames = [
+                "① 사분면 색출관",
+                "② X축 조준사",
+                "③ Y축 유도사",
+                "④ 어뢰 투하관 🚀"
+            ];
+            const myAssignedStages = [];
+            for (let s = 0; s < 4; s++) {
+                if (getStageActorIndex(s, teamSize, problemCount) === memberIndex) {
+                    myAssignedStages.push(stageNames[s]);
+                }
+            }
+            return `${memberIndex + 1}번 대원 [${myAssignedStages.join(' + ')}]`;
+        }
+
+        function createInitialRoomData() {
+            return {
+                blueShips: 3,
+                redShips: 3,
+                blueMembers: [],
+                redMembers: [],
+                blueStage: 0,
+                redStage: 0,
+                blueProblemCount: 1,
+                redProblemCount: 1,
+                blueMission: generateSonarMission(),
+                redMission: generateSonarMission(),
+                blueCrosshair: { quad: 0, x: null, y: null },
+                redCrosshair: { quad: 0, x: null, y: null },
+                lastHit: null,
+                lastLaunch: null,
+                updatedAt: Date.now()
+            };
+        }
+
+        window.joinTeam = async function(team) {
+            const name = document.getElementById('player-name').value.trim();
+            const code = document.getElementById('room-code').value.trim();
+
+            if (!name) {
+                showCustomModal('입력 오류', '소나 항해관 닉네임을 입력해 주세요!');
+                return;
+            }
+            if (!code) {
+                showCustomModal('입력 오류', '배틀룸 코드를 입력해 주세요!');
+                return;
+            }
+
+            currentUserName = name;
+            currentRoomCode = code;
+            myTeam = team;
+
+            const myMemberObj = { name: currentUserName, joinedAt: Date.now() };
+            document.getElementById('lobby-status').innerText = "심해 레이더 통신망에 접속 중입니다...";
+
+            // Setup dedicated BroadcastChannel for zero-latency local/multi-tab sync
+            try {
+                if (window.BroadcastChannel) {
+                    if (bc) bc.close();
+                    bc = new BroadcastChannel(`stealth_sonar_${currentRoomCode}`);
+                    bc.onmessage = (event) => {
+                        const msg = event.data;
+                        if (!msg) return;
+                        if (msg.type === 'SYNC_STATE') {
+                            applyRoomState(msg.payload, false);
+                        } else if (msg.type === 'REQUEST_STATE') {
+                            if (lastKnownRoomData) {
+                                bc.postMessage({ type: 'SYNC_STATE', payload: lastKnownRoomData });
+                            }
+                        } else if (msg.type === 'MEMBER_JOIN') {
+                            if (lastKnownRoomData) {
+                                const updated = { ...lastKnownRoomData };
+                                if (msg.team === 'blue') {
+                                    updated.blueMembers = mergeMembers(updated.blueMembers, [msg.member]);
+                                } else {
+                                    updated.redMembers = mergeMembers(updated.redMembers, [msg.member]);
+                                }
+                                updated.updatedAt = Date.now();
+                                applyRoomState(updated, true);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            let initialData = null;
+
+            // Separate collection path: 'stealth_sonar_rooms' (zero collision with racer or tower defense)
+            try {
+                if (!useFallback && db) {
+                    const roomRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'stealth_sonar_rooms'), currentRoomCode);
+                    const snap = await getDoc(roomRef);
+
+                    if (snap.exists()) {
+                        initialData = snap.data();
+                    } else {
+                        initialData = createInitialRoomData();
+                    }
+
+                    if (team === 'blue') {
+                        initialData.blueMembers = mergeMembers(initialData.blueMembers, [myMemberObj]);
+                    } else {
+                        initialData.redMembers = mergeMembers(initialData.redMembers, [myMemberObj]);
+                    }
+
+                    initialData.updatedAt = Date.now();
+                    await setDoc(roomRef, initialData, { merge: true });
+                    startFirestoreListener(roomRef);
+                }
+            } catch (err) {
+                useFallback = true;
+            }
+
+            if (!initialData) {
+                initialData = createInitialRoomData();
+                if (team === 'blue') initialData.blueMembers = [myMemberObj];
+                else initialData.redMembers = [myMemberObj];
+
+                if (bc) {
+                    bc.postMessage({ type: 'REQUEST_STATE' });
+                    bc.postMessage({ type: 'MEMBER_JOIN', member: myMemberObj, team: myTeam });
+                }
+            }
+
+            applyRoomState(initialData, true);
+
+            // Switch to Battle Arena
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('battle-screen').classList.remove('hidden');
+            initRadarCanvas();
+            sfx.sonarPing();
+        };
+
+        function startFirestoreListener(roomRef) {
+            if (unsubscribeRoom) unsubscribeRoom();
+            unsubscribeRoom = onSnapshot(roomRef, (snap) => {
+                if (!snap.exists()) return;
+                applyRoomState(snap.data(), false);
+            }, () => { useFallback = true; });
+        }
+
+        function applyRoomState(data, broadcastEcho = false) {
+            if (!data) return;
+
+            if (lastKnownRoomData) {
+                data.blueMembers = mergeMembers(lastKnownRoomData.blueMembers, data.blueMembers);
+                data.redMembers = mergeMembers(lastKnownRoomData.redMembers, data.redMembers);
+            } else {
+                data.blueMembers = mergeMembers([], data.blueMembers);
+                data.redMembers = mergeMembers([], data.redMembers);
+            }
+
+            lastKnownRoomData = data;
+
+            // Attack & Hit Detection
+            if (data.lastLaunch && (!window.lastObservedLaunchId || window.lastObservedLaunchId !== data.lastLaunch.id)) {
+                window.lastObservedLaunchId = data.lastLaunch.id;
+                triggerTorpedoAnimation(data.lastLaunch.team, data.lastLaunch.x, data.lastLaunch.y);
+            }
+
+            if (data.lastHit && (!window.lastObservedHitId || window.lastObservedHitId !== data.lastHit.id)) {
+                window.lastObservedHitId = data.lastHit.id;
+                triggerShipExplosion(data.lastHit.victimTeam, data.lastHit.x, data.lastHit.y);
+            }
+
+            // Update Fleets HUD
+            updateFleetsHUD(data.blueShips, data.redShips);
+
+            const bMembers = (data.blueMembers || []).map(m => m.name || m);
+            const rMembers = (data.redMembers || []).map(m => m.name || m);
+            document.getElementById('blue-members').innerText = `소나 대원(${bMembers.length}명): ${bMembers.join(', ') || '대기 중'}`;
+            document.getElementById('red-members').innerText = `소나 대원(${rMembers.length}명): ${rMembers.join(', ') || '대기 중'}`;
+
+            // Update Pipeline UI
+            updatePipelineUI(data);
+
+            // Victory Check: First fleet to sink all 3 enemy warships wins!
+            if ((data.blueShips <= 0 || data.redShips <= 0) && !battleEnded) {
+                battleEnded = true;
+                const winnerTeam = data.redShips <= 0 ? 'blue' : 'red';
+                triggerGrandVictory(winnerTeam, data);
+            }
+
+            if (broadcastEcho && bc) {
+                try {
+                    bc.postMessage({ type: 'SYNC_STATE', payload: data });
+                } catch (e) {}
+            }
+        }
+
+        async function syncStateUpdate(nextData) {
+            applyRoomState(nextData, true);
+            if (!useFallback && db) {
+                try {
+                    const roomRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'stealth_sonar_rooms'), currentRoomCode);
+                    await updateDoc(roomRef, nextData);
+                } catch (e) {
+                    useFallback = true;
+                }
+            }
+        }
+
+        function updateFleetsHUD(blueShips, redShips) {
+            const bCount = Math.max(0, blueShips !== undefined ? blueShips : 3);
+            const rCount = Math.max(0, redShips !== undefined ? redShips : 3);
+
+            document.getElementById('blue-ships-count').innerText = bCount;
+            document.getElementById('red-ships-count').innerText = rCount;
+
+            const bIcons = document.getElementById('blue-ships-icons');
+            bIcons.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                bIcons.innerHTML += (i < bCount) ? '<span>🚢</span>' : '<span class="opacity-30 grayscale">💥</span>';
+            }
+
+            const rIcons = document.getElementById('red-ships-icons');
+            rIcons.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                rIcons.innerHTML += (i < rCount) ? '<span>🚢</span>' : '<span class="opacity-30 grayscale">💥</span>';
+            }
+        }
+
+        function updatePipelineUI(data) {
+            const team = myTeam;
+            const myRawMembers = team === 'blue' ? (data.blueMembers || []) : (data.redMembers || []);
+            const myMembers = mergeMembers([], myRawMembers);
+            const currentStage = team === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
+            const currentMission = team === 'blue' ? data.blueMission : data.redMission;
+            const problemCount = team === 'blue' ? (data.blueProblemCount || 1) : (data.redProblemCount || 1);
+            const myCrosshair = team === 'blue' ? (data.blueCrosshair || {}) : (data.redCrosshair || {});
+
+            if (!currentMission) return;
+
+            // Target Ship Badge
+            const destroyedEnemyCount = 3 - (team === 'blue' ? data.redShips : data.blueShips);
+            document.getElementById('current-target-name').innerText = `적 스텔스 전함 #${destroyedEnemyCount + 1}`;
+
+            // Clue Display based on stage progression
+            const clueDisplay = document.getElementById('mission-clue-display');
+            if (currentStage === 0) {
+                clueDisplay.innerText = currentMission.fullClue;
+            } else if (currentStage === 1) {
+                clueDisplay.innerText = `【제${currentMission.targetQuadrant}사분면 색출 성공】 힌트: ${currentMission.xClue}`;
+            } else if (currentStage === 2) {
+                clueDisplay.innerText = `【x = ${currentMission.targetX} 조준 완료】 힌트: ${currentMission.yClue}`;
+            } else {
+                clueDisplay.innerText = `【최종 조준 완료: (${currentMission.targetX}, ${currentMission.targetY})】 심해 어뢰를 투하하여 전함을 격침하세요!`;
+            }
+
+            // Crosshair Coordinate Label
+            const xLabel = myCrosshair.x !== null ? myCrosshair.x : '?';
+            const yLabel = myCrosshair.y !== null ? myCrosshair.y : '?';
+            document.getElementById('crosshair-coord-label').innerText = `(${xLabel}, ${yLabel})`;
+
+            // My Team Badge
+            const teamBadge = document.getElementById('my-team-badge');
+            if (team === 'blue') {
+                teamBadge.innerText = `🔵 청해 블루 소나 [타겟 #${problemCount}]`;
+                teamBadge.className = 'text-xs px-3.5 py-1.5 bg-cyan-500/25 text-cyan-300 border border-cyan-400 rounded-full font-bold';
+            } else {
+                teamBadge.innerText = `🔴 홍해 레드 헌터 [타겟 #${problemCount}]`;
+                teamBadge.className = 'text-xs px-3.5 py-1.5 bg-rose-500/25 text-rose-300 border border-rose-400 rounded-full font-bold';
+            }
+
+            const teamSize = Math.max(1, myMembers.length);
+            const myIndex = myMembers.findIndex(m => m.name === currentUserName);
+            const activeMemberIndex = getStageActorIndex(currentStage, teamSize, problemCount);
+            const activeMemberObj = myMembers[activeMemberIndex];
+            const activeMemberName = activeMemberObj ? activeMemberObj.name : `${activeMemberIndex + 1}번 대원`;
+
+            const isMyTurn = (myIndex !== -1) && (myIndex === activeMemberIndex);
+
+            if (isMyTurn && !prevWasMyTurn) {
+                sfx.sonarPing();
+            }
+            prevWasMyTurn = isMyTurn;
+
+            // My Assigned Role Label
+            const roleBadge = document.getElementById('my-role-badge');
+            if (myIndex !== -1) {
+                roleBadge.innerText = `내 포지션: ${getRoleDescription(myIndex, teamSize, problemCount)}`;
+                roleBadge.className = isMyTurn 
+                    ? 'text-xs px-3.5 py-1.5 bg-yellow-400 text-slate-950 border-2 border-yellow-300 rounded-full font-sonar animate-pulse'
+                    : 'text-xs px-3.5 py-1.5 bg-teal-500/20 text-teal-300 border border-teal-500/40 rounded-full font-bold';
+            } else {
+                roleBadge.innerText = "소나 관전 중";
+            }
+
+            // Step Instruction & Control Toggling
+            const instEl = document.getElementById('step-instruction');
+            const quadControls = document.getElementById('quadrant-buttons-control');
+            const numControls = document.getElementById('number-input-control');
+            const torpedoControls = document.getElementById('torpedo-launch-control');
+            const waitingNotice = document.getElementById('waiting-notice');
+            const currentActorEl = document.getElementById('current-actor-name');
+            const stepNumInput = document.getElementById('step-number-input');
+
+            if (currentStage === 0) {
+                instEl.innerText = "【1단계: 사분면 색출】 부호 힌트를 분석하여 적 전함이 위치한 사분면 버튼을 터치하세요!";
+            } else if (currentStage === 1) {
+                instEl.innerText = "【2단계: X축 조준】 x좌표 힌트(거리/대칭/방정식)를 계산하여 정확한 X값을 입력하세요!";
+            } else if (currentStage === 2) {
+                instEl.innerText = "【3단계: Y축 유도】 정비례 또는 반비례 관계식에 x값을 대입하여 정확한 Y값을 입력하세요!";
+            } else if (currentStage === 3) {
+                instEl.innerText = "【4단계: 어뢰 투하】 최종 교점 확인 완료! 어뢰 발사 버튼을 터치하여 적함을 격침하세요!";
+            }
+
+            if (isMyTurn) {
+                waitingNotice.classList.add('hidden');
+                if (currentStage === 0) {
+                    numControls.classList.add('hidden');
+                    torpedoControls.classList.add('hidden');
+                    quadControls.classList.remove('hidden');
+                } else if (currentStage === 1 || currentStage === 2) {
+                    quadControls.classList.add('hidden');
+                    torpedoControls.classList.add('hidden');
+                    numControls.classList.remove('hidden');
+                    stepNumInput.disabled = false;
+                    stepNumInput.value = '';
+                    stepNumInput.placeholder = currentStage === 1 ? "X 좌표 입력" : "Y 좌표 입력";
+                    stepNumInput.focus();
+                } else {
+                    quadControls.classList.add('hidden');
+                    numControls.classList.add('hidden');
+                    torpedoControls.classList.remove('hidden');
+                }
+            } else {
+                quadControls.classList.add('hidden');
+                numControls.classList.add('hidden');
+                torpedoControls.classList.add('hidden');
+                waitingNotice.classList.remove('hidden');
+                currentActorEl.innerText = `${activeMemberName} (${activeMemberIndex + 1}번 대원)`;
+            }
+
+            // 4-Stage Tracker Cards
+            const stageTitles = [
+                "① 사분면 색출",
+                "② X축 조준선",
+                "③ Y축 유도선",
+                "④ 어뢰 투하 🚀"
+            ];
+
+            for (let s = 0; s < 4; s++) {
+                const card = document.getElementById(`stage-card-${s}`);
+                const stageActorIdx = getStageActorIndex(s, teamSize, problemCount);
+                const stageActorObj = myMembers[stageActorIdx];
+                const stageActorName = stageActorObj ? stageActorObj.name : `${stageActorIdx + 1}번 대원`;
+                const isThisMine = (myIndex === stageActorIdx);
+
+                card.innerHTML = `<div class="font-bold text-xs">${stageTitles[s]}</div>
+                                  <div class="text-[11px] mt-1 ${isThisMine ? 'text-yellow-300 font-bold' : 'text-slate-400'}">담당: ${stageActorName}${isThisMine ? ' (나)' : ''}</div>`;
+
+                if (s === currentStage) {
+                    card.className = "p-2.5 rounded-xl border-2 transition-all bg-yellow-400/20 border-yellow-300 text-yellow-300 font-bold animate-pulse shadow-lg";
+                } else if (s < currentStage) {
+                    card.className = "p-2.5 rounded-xl border transition-all bg-emerald-950/60 border-emerald-500/60 text-emerald-300 font-semibold";
+                } else {
+                    card.className = "p-2.5 rounded-xl border transition-all bg-slate-950/60 border-slate-800 text-slate-500";
+                }
+            }
+        }
+
+        window.submitQuadrantStep = async function(chosenQuad) {
+            if (!lastKnownRoomData) return;
+            const data = lastKnownRoomData;
+            const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
+            const mission = myTeam === 'blue' ? data.blueMission : data.redMission;
+
+            if (currentStage !== 0) return;
+
+            if (chosenQuad === mission.targetQuadrant) {
+                sfx.success();
+                const nextData = { ...data };
+                if (myTeam === 'blue') {
+                    nextData.blueStage = 1;
+                    nextData.blueCrosshair = { quad: chosenQuad, x: null, y: null };
+                } else {
+                    nextData.redStage = 1;
+                    nextData.redCrosshair = { quad: chosenQuad, x: null, y: null };
+                }
+                showStepFeedback(`✨ [제${chosenQuad}사분면 포착] 소나 탐지망을 집중합니다! 2번 대원 X축 조준 개시!`, false);
+                nextData.updatedAt = Date.now();
+                await syncStateUpdate(nextData);
+            } else {
+                sfx.error();
+                showStepFeedback(`❌ 사분면 판정 오류! 부호 (+, -) 조건을 다시 확인하세요!`, true);
+            }
+        };
+
+        window.submitCoordinateStep = async function() {
+            if (!lastKnownRoomData) return;
+            const inputEl = document.getElementById('step-number-input');
+            const val = parseFloat(inputEl.value.trim());
+
+            if (isNaN(val)) {
+                showStepFeedback("좌표 숫자를 입력해 주세요!", true);
+                sfx.error();
+                return;
+            }
+
+            const data = lastKnownRoomData;
+            const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
+            const mission = myTeam === 'blue' ? data.blueMission : data.redMission;
+
+            if (currentStage === 1) {
+                // Check X coordinate
+                if (val === mission.targetX) {
+                    sfx.success();
+                    const nextData = { ...data };
+                    if (myTeam === 'blue') {
+                        nextData.blueStage = 2;
+                        nextData.blueCrosshair.x = val;
+                    } else {
+                        nextData.redStage = 2;
+                        nextData.redCrosshair.x = val;
+                    }
+                    showStepFeedback(`🎯 [X축 조준 성공: x = ${val}] 세로 유도선 고정! 3번 대원 관계식 Y좌표 유도 개시!`, false);
+                    nextData.updatedAt = Date.now();
+                    await syncStateUpdate(nextData);
+                } else {
+                    sfx.error();
+                    showStepFeedback(`❌ X좌표 불일치! 거리와 대칭 조건을 다시 계산하세요!`, true);
+                }
+            } else if (currentStage === 2) {
+                // Check Y coordinate
+                if (val === mission.targetY) {
+                    sfx.success();
+                    const nextData = { ...data };
+                    if (myTeam === 'blue') {
+                        nextData.blueStage = 3;
+                        nextData.blueCrosshair.y = val;
+                    } else {
+                        nextData.redStage = 3;
+                        nextData.redCrosshair.y = val;
+                    }
+                    showStepFeedback(`🎯 [Y축 교차 성공: (${mission.targetX}, ${val})] 락온 완료! 4번 대원 어뢰를 투하하세요!`, false);
+                    nextData.updatedAt = Date.now();
+                    await syncStateUpdate(nextData);
+                } else {
+                    sfx.error();
+                    showStepFeedback(`❌ Y좌표 불일치! 관계식(${mission.fnExpr})에 x = ${mission.targetX}를 정확히 대입하세요!`, true);
+                }
+            }
+        };
+
+        window.launchTorpedoStep = async function() {
+            if (!lastKnownRoomData) return;
+            const data = lastKnownRoomData;
+            const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
+            const mission = myTeam === 'blue' ? data.blueMission : data.redMission;
+
+            if (currentStage !== 3) return;
+
+            sfx.torpedoLaunch();
+            showStepFeedback(`🚀 어뢰 투하! 깊은 바다를 가르며 적 스텔스 전함으로 돌진합니다!`, false);
+
+            const nextData = { ...data };
+            const victimTeam = myTeam === 'blue' ? 'red' : 'blue';
+
+            // Register launch and hit animations
+            nextData.lastLaunch = { team: myTeam, x: mission.targetX, y: mission.targetY, id: Date.now() };
+
+            setTimeout(async () => {
+                const latest = lastKnownRoomData || nextData;
+                const hitData = { ...latest };
+                if (victimTeam === 'red') {
+                    hitData.redShips = Math.max(0, (hitData.redShips !== undefined ? hitData.redShips : 3) - 1);
+                } else {
+                    hitData.blueShips = Math.max(0, (hitData.blueShips !== undefined ? hitData.blueShips : 3) - 1);
+                }
+
+                hitData.lastHit = { victimTeam: victimTeam, x: mission.targetX, y: mission.targetY, id: Date.now() };
+                
+                // Reset stage and generate next target mission
+                if (myTeam === 'blue') {
+                    hitData.blueStage = 0;
+                    hitData.blueProblemCount = (hitData.blueProblemCount || 1) + 1;
+                    hitData.blueMission = generateSonarMission();
+                    hitData.blueCrosshair = { quad: 0, x: null, y: null };
+                } else {
+                    hitData.redStage = 0;
+                    hitData.redProblemCount = (hitData.redProblemCount || 1) + 1;
+                    hitData.redMission = generateSonarMission();
+                    hitData.redCrosshair = { quad: 0, x: null, y: null };
+                }
+
+                sfx.shipExplosion();
+                showStepFeedback(`💥 [DIRECT HIT!] 적 전함 격침 성공! 다음 타겟으로 소나를 회전합니다! (역할 자동 순환)`, false);
+                hitData.updatedAt = Date.now();
+                await syncStateUpdate(hitData);
+            }, 1400);
+
+            nextData.updatedAt = Date.now();
+            await syncStateUpdate(nextData);
+        };
+
+        function showStepFeedback(text, isError) {
+            const el = document.getElementById('battle-feedback');
+            el.innerText = text;
+            el.className = isError 
+                ? "text-sm font-bold text-rose-400 min-h-[24px] mt-3 animate-pulse" 
+                : "text-sm font-bold text-teal-300 min-h-[24px] mt-3";
+        }
+
+        window.sendQuickCheer = function(text) {
+            showStepFeedback(`📻 [소나 무전] ${text}`, false);
+            sfx.playTone(640, 'sine', 0.12, 0.2);
+        };
+
+        window.showCustomModal = function(title, msg) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerText = msg;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        };
+
+        window.closeCustomModal = function() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        };
+
+        function triggerGrandVictory(winnerTeam, roomData) {
+            sfx.victoryFanfare();
+            const isBlueWin = winnerTeam === 'blue';
+            const winnerName = isBlueWin ? "🔵 청해 함대 (블루 소나)" : "🔴 홍해 함대 (레드 헌터)";
+            const rawMembers = isBlueWin ? roomData.blueMembers : roomData.redMembers;
+            const members = (rawMembers || []).map(m => m.name || m);
+
+            document.getElementById('victory-team-title').innerText = `${winnerName} 대승리!`;
+            document.getElementById('victory-members-list').innerText = members.length > 0 ? members.join(', ') : '단독 항해사';
+            document.getElementById('victory-total-time').innerText = `${((Date.now() - missionStartTime) / 1000).toFixed(1)}초`;
+
+            setTimeout(() => {
+                document.getElementById('victory-modal').classList.remove('hidden');
+            }, 1200);
+        }
+
+        let canvas, ctx;
+        let radarSweepAngle = 0;
+        let activeTorpedoes = [];
+        let activeExplosions = [];
+        let bubbleParticles = [];
+
+        function initRadarCanvas() {
+            canvas = document.getElementById('radar-canvas');
+            ctx = canvas.getContext('2d');
+            resizeRadarCanvas();
+            window.addEventListener('resize', resizeRadarCanvas);
+            requestAnimationFrame(renderRadarLoop);
+        }
+
+        function resizeRadarCanvas() {
+            if (!canvas || !canvas.parentElement) return;
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+
+        function triggerTorpedoAnimation(team, targetX, targetY) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const scale = Math.min(canvas.width, canvas.height) / 12;
+
+            const startX = team === 'blue' ? 30 : canvas.width - 30;
+            const startY = canvas.height - 30;
+            const endX = centerX + targetX * scale;
+            const endY = centerY - targetY * scale;
+
+            activeTorpedoes.push({
+                x: startX,
+                y: startY,
+                startX: startX,
+                startY: startY,
+                endX: endX,
+                endY: endY,
+                progress: 0,
+                team: team
+            });
+        }
+
+        function triggerShipExplosion(victimTeam, targetX, targetY) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const scale = Math.min(canvas.width, canvas.height) / 12;
+
+            const impactX = centerX + targetX * scale;
+            const impactY = centerY - targetY * scale;
+
+            for (let i = 0; i < 40; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1.5;
+                activeExplosions.push({
+                    x: impactX,
+                    y: impactY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 4 + 2,
+                    color: ['#f97316', '#ef4444', '#facc15', '#ffffff'][Math.floor(Math.random() * 4)],
+                    alpha: 1,
+                    decay: 0.025
+                });
+            }
+        }
+
+        function renderRadarLoop() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const maxRadius = Math.min(w, h) * 0.46;
+            const scale = Math.min(w, h) / 12; // Grid scale from -5 to +5
+
+            radarSweepAngle = (radarSweepAngle + 0.028) % (Math.PI * 2);
+
+            // 1. Radar Circular CRT Frame
+            ctx.fillStyle = '#02181d';
+            ctx.fillRect(0, 0, w, h);
+
+            // Radar Ring Background Circles
+            ctx.strokeStyle = 'rgba(20, 184, 166, 0.25)';
+            ctx.lineWidth = 1.5;
+            for (let r = 1; r <= 5; r++) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Outer Scope Ring
+            ctx.strokeStyle = '#0d9488';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, maxRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 2. Coordinate Axes (X and Y with Arrowheads)
+            ctx.strokeStyle = '#14b8a6';
+            ctx.lineWidth = 2;
+
+            // X-Axis
+            ctx.beginPath();
+            ctx.moveTo(cx - maxRadius, cy);
+            ctx.lineTo(cx + maxRadius, cy);
+            ctx.stroke();
+
+            // Y-Axis
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - maxRadius);
+            ctx.lineTo(cx, cy + maxRadius);
+            ctx.stroke();
+
+            // Axis Tick Marks and Numbers (-5 to 5)
+            ctx.fillStyle = '#5eead4';
+            ctx.font = '10px font-mono, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            for (let i = -5; i <= 5; i++) {
+                if (i === 0) continue;
+                // X ticks
+                const tx = cx + i * scale;
+                ctx.fillRect(tx - 0.5, cy - 3, 1, 6);
+                ctx.fillText(i, tx, cy + 5);
+
+                // Y ticks
+                const ty = cy - i * scale;
+                ctx.fillRect(cx - 3, ty - 0.5, 6, 1);
+                ctx.fillText(i, cx - 12, ty - 5);
+            }
+
+            // Origin Label 'O'
+            ctx.fillText("O", cx - 8, cy + 4);
+
+            // Quadrant Roman Numerals
+            ctx.fillStyle = 'rgba(45, 212, 191, 0.15)';
+            ctx.font = 'bold 22px "Black Han Sans", sans-serif';
+            ctx.fillText("제 1 사분면", cx + maxRadius * 0.45, cy - maxRadius * 0.45);
+            ctx.fillText("제 2 사분면", cx - maxRadius * 0.45, cy - maxRadius * 0.45);
+            ctx.fillText("제 3 사분면", cx - maxRadius * 0.45, cy + maxRadius * 0.45);
+            ctx.fillText("제 4 사분면", cx + maxRadius * 0.45, cy + maxRadius * 0.45);
+
+            // 3. Rotating Sonar Sweep Beam with Gradient Wedge
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, maxRadius, radarSweepAngle - 0.35, radarSweepAngle);
+            ctx.closePath();
+            const beamGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, maxRadius);
+            beamGrad.addColorStop(0, 'rgba(45, 212, 191, 0.4)');
+            beamGrad.addColorStop(1, 'rgba(20, 184, 166, 0.02)');
+            ctx.fillStyle = beamGrad;
+            ctx.fill();
+
+            // Leading beam line
+            ctx.strokeStyle = 'rgba(94, 234, 212, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(radarSweepAngle) * maxRadius, cy + Math.sin(radarSweepAngle) * maxRadius);
+            ctx.stroke();
+            ctx.restore();
+
+            // 4. Draw Crosshairs & Clue Projections for Both Teams
+            if (lastKnownRoomData) {
+                drawTeamCrosshair(lastKnownRoomData.blueCrosshair, 'blue', cx, cy, scale);
+                drawTeamCrosshair(lastKnownRoomData.redCrosshair, 'red', cx, cy, scale);
+            }
+
+            // 5. Update & Draw Torpedoes
+            for (let i = activeTorpedoes.length - 1; i >= 0; i--) {
+                const t = activeTorpedoes[i];
+                t.progress += 0.025;
+                t.x = t.startX + (t.endX - t.startX) * t.progress;
+                t.y = t.startY + (t.endY - t.startY) * t.progress;
+
+                ctx.save();
+                ctx.fillStyle = t.team === 'blue' ? '#38bdf8' : '#f87171';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Sonar Bubbles
+                bubbleParticles.push({
+                    x: t.x + (Math.random() - 0.5) * 4,
+                    y: t.y + (Math.random() - 0.5) * 4,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: -Math.random() * 1.5,
+                    radius: Math.random() * 2.5 + 1,
+                    alpha: 0.7,
+                    decay: 0.04
+                });
+
+                if (t.progress >= 1) {
+                    activeTorpedoes.splice(i, 1);
+                }
+            }
+
+            // 6. Update & Draw Bubble & Explosion Particles
+            for (let i = bubbleParticles.length - 1; i >= 0; i--) {
+                const b = bubbleParticles[i];
+                b.x += b.vx;
+                b.y += b.vy;
+                b.alpha -= b.decay;
+                if (b.alpha <= 0) {
+                    bubbleParticles.splice(i, 1);
+                } else {
+                    ctx.save();
+                    ctx.globalAlpha = b.alpha;
+                    ctx.fillStyle = '#a7f3d0';
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            for (let i = activeExplosions.length - 1; i >= 0; i--) {
+                const ex = activeExplosions[i];
+                ex.x += ex.vx;
+                ex.y += ex.vy;
+                ex.alpha -= ex.decay;
+                if (ex.alpha <= 0) {
+                    activeExplosions.splice(i, 1);
+                } else {
+                    ctx.save();
+                    ctx.globalAlpha = ex.alpha;
+                    ctx.fillStyle = ex.color;
+                    ctx.beginPath();
+                    ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            requestAnimationFrame(renderRadarLoop);
+        }
+
+        function drawTeamCrosshair(crosshair, team, cx, cy, scale) {
+            if (!crosshair) return;
+            const isBlue = team === 'blue';
+            const color = isBlue ? '#38bdf8' : '#fb7185';
+
+            // Highlight selected quadrant (Step 0)
+            if (crosshair.quad) {
+                ctx.save();
+                ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.08)' : 'rgba(251, 113, 133, 0.08)';
+                const q = crosshair.quad;
+                const signX = (q === 1 || q === 4) ? 1 : -1;
+                const signY = (q === 1 || q === 2) ? -1 : 1;
+                ctx.fillRect(cx, cy, signX * scale * 5.2, signY * scale * 5.2);
+                ctx.restore();
+            }
+
+            // Draw X Guideline (Step 1)
+            if (crosshair.x !== null && crosshair.x !== undefined) {
+                const px = cx + crosshair.x * scale;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(px, 0);
+                ctx.lineTo(px, canvas.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw Y Guideline & Target Crosshair Reticle (Step 2 & 3)
+            if (crosshair.y !== null && crosshair.y !== undefined && crosshair.x !== null) {
+                const px = cx + crosshair.x * scale;
+                const py = cy - crosshair.y * scale;
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(0, py);
+                ctx.lineTo(canvas.width, py);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Pulsing Target Lock Crosshair
+                ctx.save();
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(px, py, 12, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(px - 16, py);
+                ctx.lineTo(px + 16, py);
+                ctx.moveTo(px, py - 16);
+                ctx.lineTo(px, py + 16);
+                ctx.stroke();
+
+                ctx.font = 'bold 11px font-mono, sans-serif';
+                ctx.fillStyle = '#fef08a';
+                ctx.textAlign = 'left';
+                ctx.fillText(`LOCK: (${crosshair.x}, ${crosshair.y})`, px + 15, py - 10);
+                ctx.restore();
+            }
+        }
+    </script>
+</body>
+</html>
