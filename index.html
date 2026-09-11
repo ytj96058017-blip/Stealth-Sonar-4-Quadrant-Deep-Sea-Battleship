@@ -1021,14 +1021,28 @@
 
             if (currentStage !== 3) return;
 
+            // Check if enemy performs Symmetry Evasion (기믹 1: 대칭이동 회피 기동)
+            if (mission.evasionType && !window.evasionHandledThisTurn) {
+                window.evasionHandledThisTurn = true;
+                openSymmetryModal(mission);
+                return;
+            }
+
+            window.evasionHandledThisTurn = false;
             sfx.torpedoLaunch();
-            showStepFeedback(`🚀 어뢰 투하! 깊은 바다를 가르며 적 스텔스 전함으로 돌진합니다!`, false);
+            showStepFeedback(`🚀 어뢰 투하! 깊은 바다를 가르며 함수 궤적을 타고 적 스텔스 전함으로 돌진합니다!`, false);
 
             const nextData = { ...data };
             const victimTeam = myTeam === 'blue' ? 'red' : 'blue';
 
             // Register launch and hit animations
-            nextData.lastLaunch = { team: myTeam, x: mission.targetX, y: mission.targetY, id: Date.now() };
+            nextData.lastLaunch = { 
+                team: myTeam, 
+                x: mission.targetX, 
+                y: mission.targetY, 
+                fnType: mission.fnType || 'direct', 
+                id: Date.now() 
+            };
 
             setTimeout(async () => {
                 const latest = lastKnownRoomData || nextData;
@@ -1064,302 +1078,115 @@
             await syncStateUpdate(nextData);
         };
 
-        function showStepFeedback(text, isError) {
-            const el = document.getElementById('battle-feedback');
-            el.innerText = text;
-            el.className = isError 
-                ? "text-sm font-bold text-rose-400 min-h-[24px] mt-3 animate-pulse" 
-                : "text-sm font-bold text-teal-300 min-h-[24px] mt-3";
+        let currentEvasionExpectedX = 0;
+        let currentEvasionExpectedY = 0;
+
+        function openSymmetryModal(mission) {
+            sfx.error();
+            const instEl = document.getElementById('symmetry-instruction');
+            const targetEl = document.getElementById('symmetry-target-display');
+            const symModal = document.getElementById('symmetry-modal');
+
+            targetEl.innerText = `기존 조준 좌표: (${mission.targetX}, ${mission.targetY})`;
+
+            let evasionDesc = "";
+            if (mission.evasionType === 'x_axis') {
+                evasionDesc = "적함이 [x축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (x, -y) 수정 좌표를 입력하세요!";
+                currentEvasionExpectedX = mission.targetX;
+                currentEvasionExpectedY = -mission.targetY;
+            } else if (mission.evasionType === 'y_axis') {
+                evasionDesc = "적함이 [y축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, y) 수정 좌표를 입력하세요!";
+                currentEvasionExpectedX = -mission.targetX;
+                currentEvasionExpectedY = mission.targetY;
+            } else {
+                evasionDesc = "적함이 [원점(O)]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, -y) 수정 좌표를 입력하세요!";
+                currentEvasionExpectedX = -mission.targetX;
+                currentEvasionExpectedY = -mission.targetY;
+            }
+
+            instEl.innerText = evasionDesc;
+            document.getElementById('sym-x-input').value = '';
+            document.getElementById('sym-y-input').value = '';
+            symModal.classList.remove('hidden');
         }
 
-        window.sendQuickCheer = function(text) {
-            showStepFeedback(`📻 [소나 무전] ${text}`, false);
-            sfx.playTone(640, 'sine', 0.12, 0.2);
+        window.submitSymmetryCorrection = function() {
+            const inputX = parseFloat(document.getElementById('sym-x-input').value.trim());
+            const inputY = parseFloat(document.getElementById('sym-y-input').value.trim());
+
+            if (isNaN(inputX) || isNaN(inputY)) {
+                sfx.error();
+                return;
+            }
+
+            if (inputX === currentEvasionExpectedX && inputY === currentEvasionExpectedY) {
+                sfx.success();
+                document.getElementById('symmetry-modal').classList.add('hidden');
+                showStepFeedback(`🎯 [대칭 회피 격파!] 수정 좌표 (${inputX}, ${inputY}) 추적 완료! 어뢰를 발사합니다!`, false);
+                
+                // Update mission target to evasion point
+                const mission = myTeam === 'blue' ? lastKnownRoomData.blueMission : lastKnownRoomData.redMission;
+                mission.targetX = currentEvasionExpectedX;
+                mission.targetY = currentEvasionExpectedY;
+                mission.evasionType = null; // Evasion resolved
+                
+                window.launchTorpedoStep();
+            } else {
+                sfx.error();
+                showStepFeedback("❌ 대칭이동 부호 계산 오류! x축 대칭: (x, -y) / y축 대칭: (-x, y) / 원점: (-x, -y)", true);
+            }
         };
 
-        window.showCustomModal = function(title, msg) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-body').innerText = msg;
-            document.getElementById('custom-modal').classList.remove('hidden');
-        };
-
-        window.closeCustomModal = function() {
-            document.getElementById('custom-modal').classList.add('hidden');
-        };
-
-        function triggerGrandVictory(winnerTeam, roomData) {
-            sfx.victoryFanfare();
-            const isBlueWin = winnerTeam === 'blue';
-            const winnerName = isBlueWin ? "🔵 청해 함대 (블루 소나)" : "🔴 홍해 함대 (레드 헌터)";
-            const rawMembers = isBlueWin ? roomData.blueMembers : roomData.redMembers;
-            const members = (rawMembers || []).map(m => m.name || m);
-
-            document.getElementById('victory-team-title').innerText = `${winnerName} 대승리!`;
-            document.getElementById('victory-members-list').innerText = members.length > 0 ? members.join(', ') : '단독 항해사';
-            document.getElementById('victory-total-time').innerText = `${((Date.now() - missionStartTime) / 1000).toFixed(1)}초`;
-
-            setTimeout(() => {
-                document.getElementById('victory-modal').classList.remove('hidden');
-            }, 1200);
-        }
-
-        let canvas, ctx;
-        let radarSweepAngle = 0;
-        let activeTorpedoes = [];
-        let activeExplosions = [];
-        let bubbleParticles = [];
-
-        function initRadarCanvas() {
-            canvas = document.getElementById('radar-canvas');
-            ctx = canvas.getContext('2d');
-            resizeRadarCanvas();
-            window.addEventListener('resize', resizeRadarCanvas);
-            requestAnimationFrame(renderRadarLoop);
-        }
-
-        function resizeRadarCanvas() {
-            if (!canvas || !canvas.parentElement) return;
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-        }
-
-        function triggerTorpedoAnimation(team, targetX, targetY) {
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const scale = Math.min(canvas.width, canvas.height) / 12;
-
-            const startX = team === 'blue' ? 30 : canvas.width - 30;
-            const startY = canvas.height - 30;
-            const endX = centerX + targetX * scale;
-            const endY = centerY - targetY * scale;
-
-            activeTorpedoes.push({
-                x: startX,
-                y: startY,
-                startX: startX,
-                startY: startY,
-                endX: endX,
-                endY: endY,
-                progress: 0,
-                team: team
-            });
-        }
-
-        function triggerShipExplosion(victimTeam, targetX, targetY) {
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const scale = Math.min(canvas.width, canvas.height) / 12;
-
-            const impactX = centerX + targetX * scale;
-            const impactY = centerY - targetY * scale;
-
-            for (let i = 0; i < 40; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 4 + 1.5;
-                activeExplosions.push({
-                    x: impactX,
-                    y: impactY,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    radius: Math.random() * 4 + 2,
-                    color: ['#f97316', '#ef4444', '#facc15', '#ffffff'][Math.floor(Math.random() * 4)],
-                    alpha: 1,
-                    decay: 0.025
-                });
-            }
-        }
-
-        function renderRadarLoop() {
-            if (!ctx) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const w = canvas.width;
-            const h = canvas.height;
-            const cx = w / 2;
-            const cy = h / 2;
-            const maxRadius = Math.min(w, h) * 0.46;
-            const scale = Math.min(w, h) / 12; // Grid scale from -5 to +5
-
-            radarSweepAngle = (radarSweepAngle + 0.028) % (Math.PI * 2);
-
-            // 1. Radar Circular CRT Frame
-            ctx.fillStyle = '#02181d';
-            ctx.fillRect(0, 0, w, h);
-
-            // Radar Ring Background Circles
-            ctx.strokeStyle = 'rgba(20, 184, 166, 0.25)';
-            ctx.lineWidth = 1.5;
-            for (let r = 1; r <= 5; r++) {
-                ctx.beginPath();
-                ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-
-            // Outer Scope Ring
-            ctx.strokeStyle = '#0d9488';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(cx, cy, maxRadius, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // 2. Coordinate Axes (X and Y with Arrowheads)
-            ctx.strokeStyle = '#14b8a6';
-            ctx.lineWidth = 2;
-
-            // X-Axis
-            ctx.beginPath();
-            ctx.moveTo(cx - maxRadius, cy);
-            ctx.lineTo(cx + maxRadius, cy);
-            ctx.stroke();
-
-            // Y-Axis
-            ctx.beginPath();
-            ctx.moveTo(cx, cy - maxRadius);
-            ctx.lineTo(cx, cy + maxRadius);
-            ctx.stroke();
-
-            // Axis Tick Marks and Numbers (-5 to 5)
-            ctx.fillStyle = '#5eead4';
-            ctx.font = '10px font-mono, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-
-            for (let i = -5; i <= 5; i++) {
-                if (i === 0) continue;
-                // X ticks
-                const tx = cx + i * scale;
-                ctx.fillRect(tx - 0.5, cy - 3, 1, 6);
-                ctx.fillText(i, tx, cy + 5);
-
-                // Y ticks
-                const ty = cy - i * scale;
-                ctx.fillRect(cx - 3, ty - 0.5, 6, 1);
-                ctx.fillText(i, cx - 12, ty - 5);
-            }
-
-            // Origin Label 'O'
-            ctx.fillText("O", cx - 8, cy + 4);
-
-            // Quadrant Roman Numerals
-            ctx.fillStyle = 'rgba(45, 212, 191, 0.15)';
-            ctx.font = 'bold 22px "Black Han Sans", sans-serif';
-            ctx.fillText("제 1 사분면", cx + maxRadius * 0.45, cy - maxRadius * 0.45);
-            ctx.fillText("제 2 사분면", cx - maxRadius * 0.45, cy - maxRadius * 0.45);
-            ctx.fillText("제 3 사분면", cx - maxRadius * 0.45, cy + maxRadius * 0.45);
-            ctx.fillText("제 4 사분면", cx + maxRadius * 0.45, cy + maxRadius * 0.45);
-
-            // 3. Rotating Sonar Sweep Beam with Gradient Wedge
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, maxRadius, radarSweepAngle - 0.35, radarSweepAngle);
-            ctx.closePath();
-            const beamGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, maxRadius);
-            beamGrad.addColorStop(0, 'rgba(45, 212, 191, 0.4)');
-            beamGrad.addColorStop(1, 'rgba(20, 184, 166, 0.02)');
-            ctx.fillStyle = beamGrad;
-            ctx.fill();
-
-            // Leading beam line
-            ctx.strokeStyle = 'rgba(94, 234, 212, 0.8)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + Math.cos(radarSweepAngle) * maxRadius, cy + Math.sin(radarSweepAngle) * maxRadius);
-            ctx.stroke();
-            ctx.restore();
-
-            // 4. Draw Crosshairs & Clue Projections for Both Teams
-            if (lastKnownRoomData) {
-                drawTeamCrosshair(lastKnownRoomData.blueCrosshair, 'blue', cx, cy, scale);
-                drawTeamCrosshair(lastKnownRoomData.redCrosshair, 'red', cx, cy, scale);
-            }
-
-            // 5. Update & Draw Torpedoes
-            for (let i = activeTorpedoes.length - 1; i >= 0; i--) {
-                const t = activeTorpedoes[i];
-                t.progress += 0.025;
-                t.x = t.startX + (t.endX - t.startX) * t.progress;
-                t.y = t.startY + (t.endY - t.startY) * t.progress;
-
-                ctx.save();
-                ctx.fillStyle = t.team === 'blue' ? '#38bdf8' : '#f87171';
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-
-                // Sonar Bubbles
-                bubbleParticles.push({
-                    x: t.x + (Math.random() - 0.5) * 4,
-                    y: t.y + (Math.random() - 0.5) * 4,
-                    vx: (Math.random() - 0.5) * 0.8,
-                    vy: -Math.random() * 1.5,
-                    radius: Math.random() * 2.5 + 1,
-                    alpha: 0.7,
-                    decay: 0.04
-                });
-
-                if (t.progress >= 1) {
-                    activeTorpedoes.splice(i, 1);
-                }
-            }
-
-            // 6. Update & Draw Bubble & Explosion Particles
-            for (let i = bubbleParticles.length - 1; i >= 0; i--) {
-                const b = bubbleParticles[i];
-                b.x += b.vx;
-                b.y += b.vy;
-                b.alpha -= b.decay;
-                if (b.alpha <= 0) {
-                    bubbleParticles.splice(i, 1);
-                } else {
-                    ctx.save();
-                    ctx.globalAlpha = b.alpha;
-                    ctx.fillStyle = '#a7f3d0';
-                    ctx.beginPath();
-                    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-            }
-
-            for (let i = activeExplosions.length - 1; i >= 0; i--) {
-                const ex = activeExplosions[i];
-                ex.x += ex.vx;
-                ex.y += ex.vy;
-                ex.alpha -= ex.decay;
-                if (ex.alpha <= 0) {
-                    activeExplosions.splice(i, 1);
-                } else {
-                    ctx.save();
-                    ctx.globalAlpha = ex.alpha;
-                    ctx.fillStyle = ex.color;
-                    ctx.beginPath();
-                    ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-            }
-
-            requestAnimationFrame(renderRadarLoop);
-        }
-
-        function drawTeamCrosshair(crosshair, team, cx, cy, scale) {
+        function drawTeamCrosshair(crosshair, team, cx, cy, scale, mission, currentStage) {
             if (!crosshair) return;
             const isBlue = team === 'blue';
             const color = isBlue ? '#38bdf8' : '#fb7185';
 
             // Highlight selected quadrant (Step 0)
-            if (crosshair.quad) {
+            if (crosshair.quad !== undefined && crosshair.quad > 0) {
                 ctx.save();
                 ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.08)' : 'rgba(251, 113, 133, 0.08)';
                 const q = crosshair.quad;
                 const signX = (q === 1 || q === 4) ? 1 : -1;
                 const signY = (q === 1 || q === 2) ? -1 : 1;
                 ctx.fillRect(cx, cy, signX * scale * 5.2, signY * scale * 5.2);
+                ctx.restore();
+            }
+
+            // Draw Mathematical Function Trajectory Curve (기믹 3: 정비례 직선 및 반비례 쌍곡선 시각화)
+            if (mission && currentStage >= 2 && mission.targetX !== 0 && mission.targetY !== 0) {
+                ctx.save();
+                ctx.strokeStyle = isBlue ? 'rgba(56, 189, 248, 0.45)' : 'rgba(251, 113, 133, 0.45)';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+
+                if (mission.fnType === 'direct') {
+                    // Direct proportionality: y = ax (Line passing through origin)
+                    const a = mission.targetY / mission.targetX;
+                    const x1 = -5, y1 = a * x1;
+                    const x2 = 5, y2 = a * x2;
+                    ctx.moveTo(cx + x1 * scale, cy - y1 * scale);
+                    ctx.lineTo(cx + x2 * scale, cy - y2 * scale);
+                } else if (mission.fnType === 'inverse') {
+                    // Inverse proportionality: y = a/x (Hyperbola in 2 quadrants)
+                    const a = mission.targetX * mission.targetY;
+                    let started = false;
+                    for (let stepX = -5; stepX <= 5; stepX += 0.2) {
+                        if (Math.abs(stepX) < 0.3) { started = false; continue; }
+                        const stepY = a / stepX;
+                        if (Math.abs(stepY) > 5.5) continue;
+                        const px = cx + stepX * scale;
+                        const py = cy - stepY * scale;
+                        if (!started) { ctx.moveTo(px, py); started = true; }
+                        else { ctx.lineTo(px, py); }
+                    }
+                }
+                ctx.stroke();
+
+                // Trajectory Label
+                ctx.font = 'bold 11px font-mono, sans-serif';
+                ctx.fillStyle = isBlue ? '#7dd3fc' : '#fda4af';
+                ctx.fillText(`궤적: ${mission.fnExpr}`, cx + mission.targetX * scale + 14, cy - mission.targetY * scale + 16);
                 ctx.restore();
             }
 
