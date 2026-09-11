@@ -105,16 +105,16 @@
         <!-- 2. Battle Screen -->
         <div id="battle-screen" class="hidden flex flex-col gap-4">
             
-            <!-- Fleet Status HUD: 3 Warships Per Team -->
+            <!-- Fleet Status HUD: 5 Warships Per Team -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/90 p-4 rounded-3xl border border-slate-700 shadow-xl">
                 <!-- Blue Fleet -->
                 <div class="flex flex-col gap-2 p-3.5 rounded-2xl bg-cyan-950/50 border-2 border-cyan-500/50">
                     <div class="flex justify-between items-center text-sm font-bold">
                         <span class="text-cyan-300 font-sonar text-base md:text-lg flex items-center gap-2">
-                            <span>🔵</span> 청해 함대 전함 (잔여: <span id="blue-ships-count">3</span>/3척)
+                            <span>🔵</span> 청해 함대 전함 (잔여: <span id="blue-ships-count">5</span>/5척)
                         </span>
                         <div id="blue-ships-icons" class="flex items-center gap-1.5 text-xl">
-                            <span>🚢</span><span>🚢</span><span>🚢</span>
+                            <span>🚢</span><span>🚢</span><span>🚢</span><span>🚢</span><span>🚢</span>
                         </div>
                     </div>
                     <div id="blue-members" class="text-xs text-cyan-200 truncate">소나 대원: 대기 중...</div>
@@ -124,10 +124,10 @@
                 <div class="flex flex-col gap-2 p-3.5 rounded-2xl bg-rose-950/50 border-2 border-rose-500/50">
                     <div class="flex justify-between items-center text-sm font-bold">
                         <span class="text-rose-300 font-sonar text-base md:text-lg flex items-center gap-2">
-                            <span>🔴</span> 홍해 함대 전함 (잔여: <span id="red-ships-count">3</span>/3척)
+                            <span>🔴</span> 홍해 함대 전함 (잔여: <span id="red-ships-count">5</span>/5척)
                         </span>
                         <div id="red-ships-icons" class="flex items-center gap-1.5 text-xl">
-                            <span>🚢</span><span>🚢</span><span>🚢</span>
+                            <span>🚢</span><span>🚢</span><span>🚢</span><span>🚢</span><span>🚢</span>
                         </div>
                     </div>
                     <div id="red-members" class="text-xs text-rose-200 truncate">소나 대원: 대기 중...</div>
@@ -153,6 +153,20 @@
             <!-- Cooperative Sonar Pipeline Workspace -->
             <div id="action-box" class="relative bg-slate-900/95 border-2 border-teal-500/70 rounded-3xl p-5 md:p-6 shadow-2xl flex flex-col items-center text-center sonar-pulse-box">
                 
+                <!-- 찍기 방지 5초 소나 과열 락다운 오버레이 -->
+                <div id="lockout-penalty-box" class="hidden absolute inset-0 bg-slate-950/95 rounded-3xl z-40 flex flex-col items-center justify-center p-6 text-center border-4 border-rose-500 danger-siren backdrop-blur-md">
+                    <span class="text-5xl animate-bounce mb-2">⚠️</span>
+                    <h4 class="text-2xl font-sonar text-rose-400 mb-1">소나 음파 과열! 조준 장비 긴급 냉각 중</h4>
+                    <p class="text-xs md:text-sm text-slate-200 mb-3">
+                        좌표/부호 판정 실패! 무작위 찍기를 방지하기 위해 5초간 소나 콘솔이 정지됩니다.<br>
+                        팀원들과 힌트를 다시 정확히 분석하세요!
+                    </p>
+                    <div class="px-5 py-2.5 rounded-2xl bg-rose-950 border-2 border-rose-400 font-sonar text-2xl text-yellow-300 flex items-center gap-2">
+                        <span>⏳ 재가동까지:</span>
+                        <span id="lockout-timer-num" class="text-3xl font-mono text-rose-400">5.0</span>초
+                    </div>
+                </div>
+
                 <!-- Badges -->
                 <div class="flex flex-wrap items-center justify-center gap-2 mb-3">
                     <span id="my-team-badge" class="text-xs px-3.5 py-1.5 rounded-full font-bold">소속 함대</span>
@@ -326,7 +340,7 @@
                 <div class="grid grid-cols-2 gap-2 text-center text-xs font-sonar border-t border-slate-800 pt-3">
                     <div class="bg-slate-900/80 p-2 rounded-xl">
                         <span class="text-slate-400 block text-[10px]">격침 성공</span>
-                        <span class="text-teal-300 text-sm">3척 전탄 명중</span>
+                        <span class="text-teal-300 text-sm">5척 전탄 명중</span>
                     </div>
                     <div class="bg-slate-900/80 p-2 rounded-xl">
                         <span class="text-slate-400 block text-[10px]">작전 수행 타임</span>
@@ -461,23 +475,27 @@
         let missionStartTime = Date.now();
         let prevWasMyTurn = false;
         let battleEnded = false;
+        let isLockedOut = false;
+        let lockoutTimerInterval = null;
         const recentCluesSet = new Set();
 
         /*
           Procedural Math Engine for Coordinates, Quadrants, Axes, and Proportionality
-          - 20% Chance: Axis Point (targetQuadrant = 0, y=0 or x=0)
-          - 80% Chance: Quadrants 1, 2, 3, 4 with rich sign clues
-          - Step 1: X Coordinate (Distance, Symmetry, Linear Equations)
-          - Step 2: Y Coordinate (Direct proportionality y=ax or Inverse proportionality y=a/x)
-          - Symmetry Evasion assignment (x_axis, y_axis, origin)
+          - 5 Ships Progression:
+            Ship 1: Basic Quadrant (Q1 or Q2, x/y signs)
+            Ship 2: Quadrant (Q3 or Q4, negative multiplication signs) + Guaranteed Symmetry Evasion
+            Ship 3: Axis Point (100% Guaranteed axis mission: on X-axis or Y-axis) + Evasion
+            Ship 4: Advanced Quadrant (Mixed sign inequality e.g. xy < 0, x > y) + Evasion
+            Ship 5: Boss Warship (Any Quadrant, Inverse proportionality curve) + Evasion
         */
         function generateSonarMission(targetShipIndex = 1) {
             let mission = null;
             let attempts = 0;
 
-            while (attempts < 120) {
+            while (attempts < 140) {
                 attempts++;
-                const isAxisProblem = Math.random() < 0.22; // 기믹 2: 좌표축 위의 점
+                // 3번째 전함은 무조건 "좌표축 위의 점"으로 확정 출제! 다른 척수(1, 2, 4, 5척)는 100% 사분면 문제 확정!
+                const isAxisProblem = (targetShipIndex === 3);
                 let quad = 0;
                 let x = 0, y = 0;
 
@@ -493,7 +511,17 @@
                         y = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
                     }
                 } else {
-                    quad = Math.floor(Math.random() * 4) + 1; // 1, 2, 3, 4
+                    // 사분면 보장 분배 (1척: 1/2사분면, 2척: 3/4사분면, 4척: 2/4사분면, 5척: 1/3사분면)
+                    if (targetShipIndex === 1) {
+                        quad = Math.random() < 0.5 ? 1 : 2;
+                    } else if (targetShipIndex === 2) {
+                        quad = Math.random() < 0.5 ? 3 : 4;
+                    } else if (targetShipIndex === 4) {
+                        quad = Math.random() < 0.5 ? 2 : 4;
+                    } else {
+                        quad = Math.floor(Math.random() * 4) + 1;
+                    }
+
                     if (quad === 1) {
                         x = Math.floor(Math.random() * 4) + 1;
                         y = Math.floor(Math.random() * 4) + 1;
@@ -514,27 +542,27 @@
                 if (isAxisProblem) {
                     if (y === 0) {
                         quadClue = Math.random() < 0.5 
-                            ? "y좌표가 0 이어서 x축 위에 놓인 경계 구역" 
-                            : `점 (${x}, 0)과 같이 x축 위에 위치하여 어느 사분면에도 속하지 않는 구역`;
+                            ? "y좌표가 0 이어서 [x축 위]에 놓여 어느 사분면에도 속하지 않는 경계 구역" 
+                            : `점 (${x}, 0)과 같이 [x축 위]에 위치하여 사분면이 없는 경계선`;
                     } else {
                         quadClue = Math.random() < 0.5 
-                            ? "x좌표가 0 이어서 y축 위에 놓인 경계 구역" 
-                            : `점 (0, ${y})과 같이 y축 위에 위치하여 어느 사분면에도 속하지 않는 구역`;
+                            ? "x좌표가 0 이어서 [y축 위]에 놓여 어느 사분면에도 속하지 않는 경계 구역" 
+                            : `점 (0, ${y})과 같이 [y축 위]에 위치하여 사분면이 없는 경계선`;
                     }
                 } else {
                     const signClueType = Math.floor(Math.random() * 4);
                     if (signClueType === 0) {
-                        quadClue = (x > 0 && y > 0) ? "x > 0 이고 y > 0" :
-                                   (x < 0 && y > 0) ? "x < 0 이고 y > 0" :
-                                   (x < 0 && y < 0) ? "x < 0 이고 y < 0" : "x > 0 이고 y < 0";
+                        quadClue = (x > 0 && y > 0) ? "x > 0 이고 y > 0 (두 좌표 모두 양수)" :
+                                   (x < 0 && y > 0) ? "x < 0 이고 y > 0 (x는 음수, y는 양수)" :
+                                   (x < 0 && y < 0) ? "x < 0 이고 y < 0 (두 좌표 모두 음수)" : "x > 0 이고 y < 0 (x는 양수, y는 음수)";
                     } else if (signClueType === 1) {
-                        quadClue = (x * y > 0) ? (x > 0 ? "xy > 0 이며 x + y > 0" : "xy > 0 이며 x + y < 0")
-                                               : (x > 0 ? "xy < 0 이며 x > y" : "xy < 0 이며 x < y");
+                        quadClue = (x * y > 0) ? (x > 0 ? "곱 xy > 0 이며 합 x + y > 0" : "곱 xy > 0 이며 합 x + y < 0")
+                                               : (x > 0 ? "곱 xy < 0 이며 x > y" : "곱 xy < 0 이며 x < y");
                     } else if (signClueType === 2) {
-                        quadClue = `x와 y의 부호가 [${x > 0 ? '+' : '-'}, ${y > 0 ? '+' : '-'}] 인 구역`;
+                        quadClue = `x좌표와 y좌표의 부호가 순서대로 [ ${x > 0 ? '+' : '-'}, ${y > 0 ? '+' : '-'} ] 인 구역`;
                     } else {
                         const qNames = ["제1사분면", "제2사분면", "제3사분면", "제4사분면"];
-                        quadClue = `점 P가 은폐한 해역은 바로 [${qNames[quad - 1]}]`;
+                        quadClue = `소나 음파 분석 결과, 적함이 [${qNames[quad - 1]}] 에 확실히 매복 중!`;
                     }
                 }
 
@@ -560,12 +588,11 @@
                 let fnExpr = "";
 
                 if (x === 0 || y === 0) {
-                    // Axis point function behavior
                     fnType = 'direct';
                     fnExpr = y === 0 ? "y = 0x" : "x = 0";
                     yClue = y === 0 ? "x축 위에 머물러 있으므로 y = 0" : `y축 상에서 원점과의 거리가 ${Math.abs(y)}인 ${y > 0 ? '양수' : '음수'}`;
                 } else {
-                    fnType = Math.random() < 0.5 ? 'direct' : 'inverse';
+                    fnType = (targetShipIndex >= 4 || Math.random() < 0.5) ? 'inverse' : 'direct';
                     if (fnType === 'direct') {
                         if (y % x !== 0) continue;
                         const a = y / x;
@@ -580,16 +607,16 @@
                     }
                 }
 
-                // 기믹 1: 2척째 이상이거나 확률적으로 대칭이동 회피 기동 부여
+                // 기믹 1: 2척째부터는 100% 무조건 대칭이동 회피기동 발생!
                 let evasionType = null;
-                if (!isAxisProblem && (targetShipIndex >= 2 || Math.random() < 0.45)) {
+                if (!isAxisProblem && targetShipIndex >= 2) {
                     const evTypes = ['x_axis', 'y_axis', 'origin'];
-                    evasionType = evTypes[Math.floor(Math.random() * evTypes.length)];
+                    evasionType = evTypes[(targetShipIndex - 2) % evTypes.length];
                 }
 
-                const fullClue = `【음파 탐지】 ${quadClue} 에 은폐 중!`;
+                const fullClue = `【음파 탐지】 ${quadClue}`;
 
-                if (!recentCluesSet.has(fullClue) || attempts > 100) {
+                if (!recentCluesSet.has(fullClue) || attempts > 120) {
                     recentCluesSet.add(fullClue);
                     if (recentCluesSet.size > 50) {
                         const first = recentCluesSet.values().next().value;
@@ -619,61 +646,54 @@
                     targetY: 2,
                     targetQuadrant: 2,
                     isAxisProblem: false,
-                    quadClue: "x < 0 이고 y > 0",
+                    quadClue: "x < 0 이고 y > 0 (x는 음수, y는 양수)",
                     xClue: "y축까지의 거리가 3인 음수",
                     yClue: "반비례 관계식 [ y = -6/x ] 위의 점",
                     fnType: "inverse",
                     fnExpr: "y = -6/x",
-                    fullClue: "【음파 탐지】 x < 0 이고 y > 0 구역에 은폐 중!",
+                    fullClue: "【음파 탐지】 x < 0 이고 y > 0 (x는 음수, y는 양수)",
                     evasionType: "x_axis"
                 };
             }
             return mission;
         }
 
-        function mergeMembers(listA = [], listB = []) {
-            const map = new Map();
-            [...listA, ...listB].forEach(item => {
-                if (!item) return;
-                const obj = typeof item === 'string' 
-                    ? { name: item, joinedAt: Date.now() } 
-                    : { name: item.name, joinedAt: item.joinedAt || Date.now() };
-                if (!map.has(obj.name) || map.get(obj.name).joinedAt > obj.joinedAt) {
-                    map.set(obj.name, obj);
-                }
-            });
-            return Array.from(map.values()).sort((a, b) => 
-                a.joinedAt !== b.joinedAt ? a.joinedAt - b.joinedAt : a.name.localeCompare(b.name)
-            );
-        }
+        // 찍기 방지 5초간 입력 정지 락다운 페널티 실행기
+        function triggerLockoutPenalty() {
+            if (isLockedOut) return;
+            isLockedOut = true;
+            sfx.error();
 
-        function getStageActorIndex(stage, teamSize, problemCount = 1) {
-            if (teamSize <= 1) return 0;
-            const shift = (Math.max(1, problemCount) - 1) % teamSize;
-            return (stage + shift) % teamSize;
-        }
+            const lockoutBox = document.getElementById('lockout-penalty-box');
+            const timerEl = document.getElementById('lockout-timer-num');
+            lockoutBox.classList.remove('hidden');
 
-        function getRoleDescription(memberIndex, teamSize, problemCount = 1) {
-            if (teamSize <= 1) return "올라운드 소나 사령관 (전 구역 단독 탐색)";
-            const stageNames = [
-                "① 사분면 색출관",
-                "② X축 조준사",
-                "③ Y축 유도사",
-                "④ 어뢰 투하관 🚀"
-            ];
-            const myAssignedStages = [];
-            for (let s = 0; s < 4; s++) {
-                if (getStageActorIndex(s, teamSize, problemCount) === memberIndex) {
-                    myAssignedStages.push(stageNames[s]);
+            let remainMs = 5000;
+            timerEl.innerText = '5.0';
+
+            if (lockoutTimerInterval) clearInterval(lockoutTimerInterval);
+            const startAt = Date.now();
+
+            lockoutTimerInterval = setInterval(() => {
+                const elapsed = Date.now() - startAt;
+                const left = Math.max(0, (5000 - elapsed) / 1000);
+                timerEl.innerText = left.toFixed(1);
+
+                if (left <= 0) {
+                    clearInterval(lockoutTimerInterval);
+                    lockoutTimerInterval = null;
+                    isLockedOut = false;
+                    lockoutBox.classList.add('hidden');
+                    sfx.playTone(520, 'sine', 0.15, 0.2);
+                    showStepFeedback("⚡ [냉각 완료] 소나 조준 장비가 정상 복구되었습니다. 신중히 입력하세요!", false);
                 }
-            }
-            return `${memberIndex + 1}번 대원 [${myAssignedStages.join(' + ')}]`;
+            }, 100);
         }
 
         function createInitialRoomData() {
             return {
-                blueShips: 3,
-                redShips: 3,
+                blueShips: 5,
+                redShips: 5,
                 blueMembers: [],
                 redMembers: [],
                 blueStage: 0,
@@ -863,21 +883,21 @@
         }
 
         function updateFleetsHUD(blueShips, redShips) {
-            const bCount = Math.max(0, blueShips !== undefined ? blueShips : 3);
-            const rCount = Math.max(0, redShips !== undefined ? redShips : 3);
+            const bCount = Math.max(0, blueShips !== undefined ? blueShips : 5);
+            const rCount = Math.max(0, redShips !== undefined ? redShips : 5);
 
             document.getElementById('blue-ships-count').innerText = bCount;
             document.getElementById('red-ships-count').innerText = rCount;
 
             const bIcons = document.getElementById('blue-ships-icons');
             bIcons.innerHTML = '';
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 5; i++) {
                 bIcons.innerHTML += (i < bCount) ? '<span>🚢</span>' : '<span class="opacity-30 grayscale">💥</span>';
             }
 
             const rIcons = document.getElementById('red-ships-icons');
             rIcons.innerHTML = '';
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 5; i++) {
                 rIcons.innerHTML += (i < rCount) ? '<span>🚢</span>' : '<span class="opacity-30 grayscale">💥</span>';
             }
         }
@@ -893,7 +913,7 @@
 
             if (!currentMission) return;
 
-            const destroyedEnemyCount = 3 - (team === 'blue' ? data.redShips : data.blueShips);
+            const destroyedEnemyCount = 5 - (team === 'blue' ? data.redShips : data.blueShips);
             document.getElementById('current-target-name').innerText = `적 스텔스 순양함 #${destroyedEnemyCount + 1}`;
 
             const clueDisplay = document.getElementById('mission-clue-display');
@@ -1017,6 +1037,7 @@
         }
 
         window.submitQuadrantStep = async function(chosenQuad) {
+            if (isLockedOut) return;
             if (!lastKnownRoomData) return;
             const data = lastKnownRoomData;
             const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
@@ -1035,18 +1056,19 @@
                     nextData.redCrosshair = { quad: chosenQuad, x: null, y: null };
                 }
                 const feedbackText = chosenQuad === 0 
-                    ? "✨ [좌표축 위 포착!] 경계 구역 락온! 2번 대원 X축 조준 개시!" 
-                    : `✨ [제${chosenQuad}사분면 포착!] 소나 탐지망 집중! 2번 대원 X축 조준 개시!`;
+                    ? "✨ [좌표축 위 락온!] 사분면에 속하지 않는 경계 구역 포착! 2번 대원 X축 조준 개시!" 
+                    : `✨ [제${chosenQuad}사분면 색출 성공!] 소나 탐지망 집중! 2번 대원 X축 조준 개시!`;
                 showStepFeedback(feedbackText, false);
                 nextData.updatedAt = Date.now();
                 await syncStateUpdate(nextData);
             } else {
-                sfx.error();
-                showStepFeedback("❌ 사분면 판정 오류! 부호 (+, -)와 축 조건을 다시 확인하세요!", true);
+                showStepFeedback("❌ 사분면 판정 오류! (찍기 방지 5초 조준 잠금 발동)", true);
+                triggerLockoutPenalty();
             }
         };
 
         window.submitCoordinateStep = async function() {
+            if (isLockedOut) return;
             if (!lastKnownRoomData) return;
             const inputEl = document.getElementById('step-number-input');
             const val = parseFloat(inputEl.value.trim());
@@ -1076,8 +1098,8 @@
                     nextData.updatedAt = Date.now();
                     await syncStateUpdate(nextData);
                 } else {
-                    sfx.error();
-                    showStepFeedback("❌ X좌표 불일치! 거리와 대칭 조건을 다시 계산하세요!", true);
+                    showStepFeedback("❌ X좌표 불일치! 거리·대칭 계산 오류! (5초 조준 잠금)", true);
+                    triggerLockoutPenalty();
                 }
             } else if (currentStage === 2) {
                 if (val === mission.targetY) {
@@ -1094,13 +1116,14 @@
                     nextData.updatedAt = Date.now();
                     await syncStateUpdate(nextData);
                 } else {
-                    sfx.error();
-                    showStepFeedback(`❌ Y좌표 불일치! 관계식(${mission.fnExpr})에 x = ${mission.targetX}를 정확히 대입하세요!`, true);
+                    showStepFeedback(`❌ Y좌표 불일치! 관계식(${mission.fnExpr})에 x=${mission.targetX} 대입 오류! (5초 조준 잠금)`, true);
+                    triggerLockoutPenalty();
                 }
             }
         };
 
         window.launchTorpedoStep = async function() {
+            if (isLockedOut) return;
             if (!lastKnownRoomData) return;
             const data = lastKnownRoomData;
             const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
@@ -1108,7 +1131,7 @@
 
             if (currentStage !== 3) return;
 
-            // 기믹 1: 대칭이동 회피 기동 확인
+            // 기믹 1: 2척째부터는 대칭이동 회피기동 100% 무조건 발동!
             if (mission.evasionType && !window.evasionHandledThisTurn) {
                 window.evasionHandledThisTurn = true;
                 openSymmetryModal(mission);
@@ -1134,9 +1157,9 @@
                 const latest = lastKnownRoomData || nextData;
                 const hitData = { ...latest };
                 if (victimTeam === 'red') {
-                    hitData.redShips = Math.max(0, (hitData.redShips !== undefined ? hitData.redShips : 3) - 1);
+                    hitData.redShips = Math.max(0, (hitData.redShips !== undefined ? hitData.redShips : 5) - 1);
                 } else {
-                    hitData.blueShips = Math.max(0, (hitData.blueShips !== undefined ? hitData.blueShips : 3) - 1);
+                    hitData.blueShips = Math.max(0, (hitData.blueShips !== undefined ? hitData.blueShips : 5) - 1);
                 }
 
                 hitData.lastHit = { victimTeam: victimTeam, x: mission.targetX, y: mission.targetY, id: Date.now() };
@@ -1221,6 +1244,7 @@
             } else {
                 sfx.error();
                 showStepFeedback("❌ 대칭이동 부호 계산 오류! x축 대칭: (x, -y) / y축 대칭: (-x, y) / 원점: (-x, -y)", true);
+                triggerLockoutPenalty();
             }
         };
 
