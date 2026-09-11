@@ -12,21 +12,21 @@
         body { font-family: 'Jua', 'Inter', sans-serif; }
         .font-sonar { font-family: 'Black Han Sans', sans-serif; }
         .deep-sea-bg {
-            background: radial-gradient(circle at 50% 25%, #042f2e 0%, #021a1f 55%, #010b10 100%);
+            background: radial-gradient(circle at 50% 20%, #032a30 0%, #02171c 55%, #010a0e 100%);
         }
         .sonar-pulse-box {
-            animation: sonarPulse 2s infinite ease-in-out;
+            animation: sonarPulse 2.4s infinite ease-in-out;
         }
         @keyframes sonarPulse {
-            0%, 100% { box-shadow: 0 0 15px rgba(20, 184, 166, 0.4), inset 0 0 10px rgba(20, 184, 166, 0.2); }
-            50% { box-shadow: 0 0 35px rgba(20, 184, 166, 0.85), inset 0 0 20px rgba(20, 184, 166, 0.4); }
+            0%, 100% { box-shadow: 0 0 16px rgba(20, 184, 166, 0.35), inset 0 0 10px rgba(20, 184, 166, 0.15); }
+            50% { box-shadow: 0 0 36px rgba(20, 184, 166, 0.8), inset 0 0 20px rgba(20, 184, 166, 0.35); }
         }
         .danger-siren {
-            animation: dangerAlert 0.8s infinite alternate;
+            animation: dangerAlert 0.75s infinite alternate;
         }
         @keyframes dangerAlert {
-            from { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.2); }
-            to { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.3); }
+            from { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.25); }
+            to { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.35); }
         }
         @keyframes subFloat {
             0%, 100% { transform: translateY(0); }
@@ -49,7 +49,7 @@
             <span class="text-3xl md:text-5xl float-anim">🚢</span>
         </div>
         <p class="text-xs md:text-sm text-teal-200 mt-1">
-            중학교 1학년 좌표평면·사분면·정비례·반비례 4인 협동 실시간 소나 조준 격침전
+            중학교 1학년 좌표평면·사분면·대칭이동·정·반비례 4인 협동 실시간 소나 조준 격침전
         </p>
     </header>
 
@@ -135,17 +135,18 @@
             </div>
 
             <!-- Coordinate Plane Sonar Radar Canvas -->
-            <div class="relative w-full h-72 md:h-80 bg-slate-950 rounded-3xl border-2 border-teal-500/50 overflow-hidden shadow-2xl">
-                <canvas id="radar-canvas" class="w-full h-full block"></canvas>
+            <div class="relative w-full h-80 md:h-96 bg-slate-950 rounded-3xl border-2 border-teal-500/60 overflow-hidden shadow-2xl">
+                <canvas id="radar-canvas" class="w-full h-full block cursor-crosshair"></canvas>
                 
                 <!-- Crosshair Coordinate HUD -->
-                <div class="absolute top-2 left-3 px-3 py-1 bg-slate-950/80 border border-teal-400/40 rounded-full text-xs font-mono text-teal-300 z-10 flex items-center gap-2 shadow">
+                <div class="absolute top-2 left-3 px-3 py-1 bg-slate-950/85 border border-teal-400/50 rounded-full text-xs font-mono text-teal-300 z-10 flex items-center gap-2 shadow">
                     <span>📡 레이더 스캔:</span>
                     <span id="crosshair-coord-label" class="font-bold text-yellow-300">(?, ?) 미조준</span>
                 </div>
 
-                <div class="absolute top-2 right-3 px-3 py-1 bg-slate-950/80 border border-yellow-400/40 rounded-full text-[11px] font-sonar text-yellow-300 z-10 flex items-center gap-1 shadow">
-                    <span>🎯</span> 3척 먼저 격침 시 승리
+                <div class="absolute top-2 right-3 px-3 py-1 bg-slate-950/85 border border-teal-400/50 rounded-full text-[11px] font-sonar text-teal-300 z-10 flex items-center gap-1.5 shadow">
+                    <span>👆 캔버스 터치:</span>
+                    <span class="text-yellow-300">팀 전술 핑(Ping) 전송</span>
                 </div>
             </div>
 
@@ -177,19 +178,25 @@
                         단계 안내 로딩 중...
                     </div>
 
-                    <!-- Input Mode 1: Quadrant Buttons (Step 0) -->
-                    <div id="quadrant-buttons-control" class="hidden grid grid-cols-2 gap-3 w-full max-w-md">
-                        <button onclick="submitQuadrantStep(1)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
-                            제1사분면 (+, +)
-                        </button>
-                        <button onclick="submitQuadrantStep(2)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
-                            제2사분면 (-, +)
-                        </button>
-                        <button onclick="submitQuadrantStep(3)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
-                            제3사분면 (-, -)
-                        </button>
-                        <button onclick="submitQuadrantStep(4)" class="p-3.5 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-lg text-teal-200 transition">
-                            제4사분면 (+, -)
+                    <!-- Input Mode 1: Quadrant Buttons + Axis Point Button (Step 0) -->
+                    <div id="quadrant-buttons-control" class="hidden flex flex-col gap-2.5 w-full max-w-md">
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <button onclick="submitQuadrantStep(1)" class="p-3 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-base md:text-lg text-teal-200 transition active:scale-95">
+                                제1사분면 (+, +)
+                            </button>
+                            <button onclick="submitQuadrantStep(2)" class="p-3 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-base md:text-lg text-teal-200 transition active:scale-95">
+                                제2사분면 (-, +)
+                            </button>
+                            <button onclick="submitQuadrantStep(3)" class="p-3 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-base md:text-lg text-teal-200 transition active:scale-95">
+                                제3사분면 (-, -)
+                            </button>
+                            <button onclick="submitQuadrantStep(4)" class="p-3 bg-slate-800 hover:bg-teal-900/80 border-2 border-teal-400 rounded-xl font-sonar text-base md:text-lg text-teal-200 transition active:scale-95">
+                                제4사분면 (+, -)
+                            </button>
+                        </div>
+                        <!-- 기믹 2: 어느 사분면에도 속하지 않는 축 위의 점 버튼 -->
+                        <button onclick="submitQuadrantStep(0)" class="w-full py-3 bg-gradient-to-r from-amber-600/90 to-yellow-600/90 hover:from-amber-500 hover:to-yellow-500 border-2 border-yellow-300 rounded-xl font-sonar text-sm md:text-base text-white transition active:scale-95 shadow-lg">
+                            ⭐ 좌표축(x축/y축) 위 (어느 사분면에도 속하지 않음)
                         </button>
                     </div>
 
@@ -199,7 +206,7 @@
                                class="w-full sm:w-48 px-4 py-3 rounded-xl bg-slate-950 border-2 border-teal-400 text-white font-bold text-xl text-center focus:outline-none focus:ring-2 focus:ring-teal-300"
                                onkeydown="if(event.key==='Enter') submitCoordinateStep()">
                         <button id="submit-coordinate-btn" onclick="submitCoordinateStep()" 
-                                class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-sonar text-lg rounded-xl transition shadow-lg flex items-center justify-center gap-1.5">
+                                class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-sonar text-lg rounded-xl transition shadow-lg flex items-center justify-center gap-1.5 active:scale-95">
                             <span>📡</span><span>조준선 고정</span>
                         </button>
                     </div>
@@ -214,7 +221,7 @@
 
                     <!-- Waiting Notice for Other Members -->
                     <div id="waiting-notice" class="hidden p-3 rounded-xl bg-slate-950/80 border border-slate-700 text-xs md:text-sm text-teal-200">
-                        ⏳ 현재 <span id="current-actor-name" class="font-bold text-yellow-300"></span> 대원이 소나를 조준 중입니다. 좌표를 함께 계산해 주세요!
+                        ⏳ 현재 <span id="current-actor-name" class="font-bold text-yellow-300"></span> 대원이 소나를 조준 중입니다. 캔버스를 터치하여 전술 핑을 찍어주세요!
                     </div>
                 </div>
 
@@ -244,8 +251,8 @@
                     <button onclick="sendQuickCheer('정비례는 y=ax, 반비례는 y=a/x! 📐')" class="px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-teal-500/40 rounded-lg text-xs text-teal-200">
                         📐 관계식에 x 대입!
                     </button>
-                    <button onclick="sendQuickCheer('조준 완료! 어뢰 투하해! 🚀')" class="px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-teal-500/40 rounded-lg text-xs text-teal-200">
-                        🚀 조준 완료! 어뢰 발사!
+                    <button onclick="sendQuickCheer('대칭이동 부호 규칙 기억해! 🔄')" class="px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-teal-500/40 rounded-lg text-xs text-teal-200">
+                        🔄 대칭이동 부호 기억!
                     </button>
                 </div>
 
@@ -253,6 +260,36 @@
 
         </div>
     </main>
+
+    <!-- 기믹 1: 대칭이동 회피 기동 대응 긴급 모달 -->
+    <div id="symmetry-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl danger-siren">
+            <div class="text-5xl mb-2 animate-bounce">🚨</div>
+            <h4 class="text-2xl font-sonar text-rose-300 mb-1">적 전함 긴급 회피 기동 발동!</h4>
+            <p id="symmetry-target-display" class="text-sm font-mono text-yellow-300 font-bold mb-3">기존 조준: (?, ?)</p>
+            <div id="symmetry-instruction" class="p-3 bg-slate-950 rounded-xl border border-rose-400 text-xs md:text-sm text-rose-100 font-semibold mb-4 leading-relaxed">
+                적함이 회피 기동을 감행했습니다!
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div>
+                    <label class="text-xs text-teal-300 block mb-1 font-bold">수정 X 좌표</label>
+                    <input type="number" id="sym-x-input" placeholder="수정 X" 
+                           class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border-2 border-teal-400 text-center font-bold text-lg text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-teal-300 block mb-1 font-bold">수정 Y 좌표</label>
+                    <input type="number" id="sym-y-input" placeholder="수정 Y" 
+                           class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border-2 border-teal-400 text-center font-bold text-lg text-white focus:outline-none"
+                           onkeydown="if(event.key==='Enter') submitSymmetryCorrection()">
+                </div>
+            </div>
+
+            <button onclick="submitSymmetryCorrection()" class="w-full py-3.5 bg-gradient-to-r from-rose-500 to-amber-500 text-slate-950 font-sonar text-lg rounded-xl transition shadow-xl active:scale-95">
+                🎯 대칭 수정 궤적 고정 & 발사
+            </button>
+        </div>
+    </div>
 
     <!-- Custom Modal -->
     <div id="custom-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
@@ -339,6 +376,11 @@
                 this.playTone(880, 'sine', 0.4, 0.25);
                 setTimeout(() => this.playTone(1320, 'sine', 0.5, 0.2), 80);
             }
+            tacticalPing() {
+                this.init();
+                this.playTone(660, 'sine', 0.2, 0.2);
+                setTimeout(() => this.playTone(990, 'triangle', 0.3, 0.25), 50);
+            }
             torpedoLaunch() {
                 this.init();
                 this.playTone(140, 'sawtooth', 0.25, 0.3);
@@ -352,8 +394,8 @@
             }
             success() {
                 this.init();
-                this.playTone(587.33, 'triangle', 0.15, 0.2); // D5
-                setTimeout(() => this.playTone(880.00, 'triangle', 0.25, 0.25), 100); // A5
+                this.playTone(587.33, 'triangle', 0.15, 0.2);
+                setTimeout(() => this.playTone(880.00, 'triangle', 0.25, 0.25), 100);
             }
             error() {
                 this.init();
@@ -386,7 +428,6 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Reusing existing Firebase config with dedicated collection: 'stealth_sonar_rooms'
         const firebaseConfig = {
             apiKey: "AIzaSyChxrOzoTxFMy_BvkvNZLXAp1oRvN7Fb1g",
             authDomain: "focus-tower-defense.firebaseapp.com",
@@ -423,91 +464,134 @@
         const recentCluesSet = new Set();
 
         /*
-          Procedural Math Engine for Coordinates, Quadrants, and Proportionality (Middle School 1st Grade)
-          Grid range: x, y in [-5, 5] (non-zero)
-          Step 0: Quadrant Selection (1, 2, 3, 4) based on sign clues
-          Step 1: X-coordinate solution from symmetry / distance / translation clue
-          Step 2: Y-coordinate solution from Direct Proportionality (y = ax) or Inverse Proportionality (y = a/x)
-          Step 3: Torpedo Launch and Confirmation
+          Procedural Math Engine for Coordinates, Quadrants, Axes, and Proportionality
+          - 20% Chance: Axis Point (targetQuadrant = 0, y=0 or x=0)
+          - 80% Chance: Quadrants 1, 2, 3, 4 with rich sign clues
+          - Step 1: X Coordinate (Distance, Symmetry, Linear Equations)
+          - Step 2: Y Coordinate (Direct proportionality y=ax or Inverse proportionality y=a/x)
+          - Symmetry Evasion assignment (x_axis, y_axis, origin)
         */
-        function generateSonarMission() {
+        function generateSonarMission(targetShipIndex = 1) {
             let mission = null;
             let attempts = 0;
 
-            while (attempts < 100) {
+            while (attempts < 120) {
                 attempts++;
-                const quad = Math.floor(Math.random() * 4) + 1; // 1, 2, 3, 4
+                const isAxisProblem = Math.random() < 0.22; // 기믹 2: 좌표축 위의 점
+                let quad = 0;
                 let x = 0, y = 0;
 
-                // Sign determination based on quadrant
-                if (quad === 1) { // (+, +)
-                    x = Math.floor(Math.random() * 4) + 1;
-                    y = Math.floor(Math.random() * 4) + 1;
-                } else if (quad === 2) { // (-, +)
-                    x = (Math.floor(Math.random() * 4) + 1) * -1;
-                    y = Math.floor(Math.random() * 4) + 1;
-                } else if (quad === 3) { // (-, -)
-                    x = (Math.floor(Math.random() * 4) + 1) * -1;
-                    y = (Math.floor(Math.random() * 4) + 1) * -1;
-                } else { // (+, -)
-                    x = Math.floor(Math.random() * 4) + 1;
-                    y = (Math.floor(Math.random() * 4) + 1) * -1;
+                if (isAxisProblem) {
+                    quad = 0; // 0 represents "어느 사분면에도 속하지 않는 축 위의 점"
+                    if (Math.random() < 0.5) {
+                        // On X-axis (y = 0)
+                        x = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                        y = 0;
+                    } else {
+                        // On Y-axis (x = 0)
+                        x = 0;
+                        y = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                    }
+                } else {
+                    quad = Math.floor(Math.random() * 4) + 1; // 1, 2, 3, 4
+                    if (quad === 1) {
+                        x = Math.floor(Math.random() * 4) + 1;
+                        y = Math.floor(Math.random() * 4) + 1;
+                    } else if (quad === 2) {
+                        x = -(Math.floor(Math.random() * 4) + 1);
+                        y = Math.floor(Math.random() * 4) + 1;
+                    } else if (quad === 3) {
+                        x = -(Math.floor(Math.random() * 4) + 1);
+                        y = -(Math.floor(Math.random() * 4) + 1);
+                    } else {
+                        x = Math.floor(Math.random() * 4) + 1;
+                        y = -(Math.floor(Math.random() * 4) + 1);
+                    }
                 }
 
-                // Step 0: Quadrant Sign Clue
-                const signClueType = Math.floor(Math.random() * 3);
+                // Step 0 Clue
                 let quadClue = "";
-                if (signClueType === 0) {
-                    quadClue = x > 0 && y > 0 ? "x > 0 이고 y > 0" :
-                               x < 0 && y > 0 ? "x < 0 이고 y > 0" :
-                               x < 0 && y < 0 ? "x < 0 이고 y < 0" : "x > 0 이고 y < 0";
-                } else if (signClueType === 1) {
-                    quadClue = (x * y > 0) ? (x > 0 ? "xy > 0 이며 x + y > 0" : "xy > 0 이며 x + y < 0")
-                                           : (x > 0 ? "xy < 0 이며 x > y" : "xy < 0 이며 x < y");
+                if (isAxisProblem) {
+                    if (y === 0) {
+                        quadClue = Math.random() < 0.5 
+                            ? "y좌표가 0 이어서 x축 위에 놓인 경계 구역" 
+                            : `점 (${x}, 0)과 같이 x축 위에 위치하여 어느 사분면에도 속하지 않는 구역`;
+                    } else {
+                        quadClue = Math.random() < 0.5 
+                            ? "x좌표가 0 이어서 y축 위에 놓인 경계 구역" 
+                            : `점 (0, ${y})과 같이 y축 위에 위치하여 어느 사분면에도 속하지 않는 구역`;
+                    }
                 } else {
-                    const qNames = ["제1사분면", "제2사분면", "제3사분면", "제4사분면"];
-                    quadClue = `점 P가 위치한 구역은 바로 [${qNames[quad - 1]}]`;
+                    const signClueType = Math.floor(Math.random() * 4);
+                    if (signClueType === 0) {
+                        quadClue = (x > 0 && y > 0) ? "x > 0 이고 y > 0" :
+                                   (x < 0 && y > 0) ? "x < 0 이고 y > 0" :
+                                   (x < 0 && y < 0) ? "x < 0 이고 y < 0" : "x > 0 이고 y < 0";
+                    } else if (signClueType === 1) {
+                        quadClue = (x * y > 0) ? (x > 0 ? "xy > 0 이며 x + y > 0" : "xy > 0 이며 x + y < 0")
+                                               : (x > 0 ? "xy < 0 이며 x > y" : "xy < 0 이며 x < y");
+                    } else if (signClueType === 2) {
+                        quadClue = `x와 y의 부호가 [${x > 0 ? '+' : '-'}, ${y > 0 ? '+' : '-'}] 인 구역`;
+                    } else {
+                        const qNames = ["제1사분면", "제2사분면", "제3사분면", "제4사분면"];
+                        quadClue = `점 P가 은폐한 해역은 바로 [${qNames[quad - 1]}]`;
+                    }
                 }
 
-                // Step 1: X-Coordinate Clue
-                const xClueType = Math.floor(Math.random() * 3);
+                // Step 1: X Clue
                 let xClue = "";
-                if (xClueType === 0) {
-                    xClue = `x좌표는 y축까지의 거리가 ${Math.abs(x)}인 ${x > 0 ? '양수' : '음수'}`;
-                } else if (xClueType === 1) {
-                    const oppositeX = -x;
-                    xClue = `점 (${oppositeX}, 0)을 y축에 대하여 대칭이동한 점의 x좌표`;
+                if (x === 0) {
+                    xClue = "y축 위의 점이므로 x좌표는 0";
                 } else {
-                    const base = x - 2;
-                    xClue = `방정식 x - (${base}) = 2 의 해`;
+                    const xClueType = Math.floor(Math.random() * 3);
+                    if (xClueType === 0) {
+                        xClue = `x좌표는 y축까지의 거리가 ${Math.abs(x)}인 ${x > 0 ? '양수' : '음수'}`;
+                    } else if (xClueType === 1) {
+                        xClue = `점 (${-x}, 0)을 y축에 대하여 대칭이동한 점의 x좌표`;
+                    } else {
+                        const base = x - 3;
+                        xClue = `일차방정식 x - (${base}) = 3 의 해`;
+                    }
                 }
 
-                // Step 2: Function Proportionality Clue for Y
-                const fnType = Math.random() < 0.5 ? 'direct' : 'inverse';
+                // Step 2: Y Function Proportionality Clue
+                let fnType = 'direct';
                 let yClue = "";
                 let fnExpr = "";
 
-                if (fnType === 'direct') {
-                    // y = a * x => a = y / x
-                    // Ensure 'a' is a clean integer
-                    if (y % x !== 0) continue;
-                    const a = y / x;
-                    const aStr = a === 1 ? '' : (a === -1 ? '-' : `${a}`);
-                    fnExpr = `y = ${aStr}x`;
-                    yClue = `y좌표는 x와 정비례 관계식 [ ${fnExpr} ] 위의 점`;
+                if (x === 0 || y === 0) {
+                    // Axis point function behavior
+                    fnType = 'direct';
+                    fnExpr = y === 0 ? "y = 0x" : "x = 0";
+                    yClue = y === 0 ? "x축 위에 머물러 있으므로 y = 0" : `y축 상에서 원점과의 거리가 ${Math.abs(y)}인 ${y > 0 ? '양수' : '음수'}`;
                 } else {
-                    // y = a / x => a = x * y
-                    const a = x * y;
-                    if (Math.abs(a) > 20) continue;
-                    fnExpr = `y = ${a} / x`;
-                    yClue = `y좌표는 x와 반비례 관계식 [ y = ${a}/x ] 위의 점`;
+                    fnType = Math.random() < 0.5 ? 'direct' : 'inverse';
+                    if (fnType === 'direct') {
+                        if (y % x !== 0) continue;
+                        const a = y / x;
+                        const aStr = a === 1 ? '' : (a === -1 ? '-' : `${a}`);
+                        fnExpr = `y = ${aStr}x`;
+                        yClue = `y좌표는 x와 정비례 관계식 [ ${fnExpr} ] 위의 점`;
+                    } else {
+                        const a = x * y;
+                        if (Math.abs(a) > 24) continue;
+                        fnExpr = `y = ${a} / x`;
+                        yClue = `y좌표는 x와 반비례 관계식 [ y = ${a}/x ] 위의 점`;
+                    }
                 }
 
-                const fullClue = `【음파 탐지】 ${quadClue} 구역에 은폐 중!`;
+                // 기믹 1: 2척째 이상이거나 확률적으로 대칭이동 회피 기동 부여
+                let evasionType = null;
+                if (!isAxisProblem && (targetShipIndex >= 2 || Math.random() < 0.45)) {
+                    const evTypes = ['x_axis', 'y_axis', 'origin'];
+                    evasionType = evTypes[Math.floor(Math.random() * evTypes.length)];
+                }
 
-                if (!recentCluesSet.has(fullClue)) {
+                const fullClue = `【음파 탐지】 ${quadClue} 에 은폐 중!`;
+
+                if (!recentCluesSet.has(fullClue) || attempts > 100) {
                     recentCluesSet.add(fullClue);
-                    if (recentCluesSet.size > 40) {
+                    if (recentCluesSet.size > 50) {
                         const first = recentCluesSet.values().next().value;
                         recentCluesSet.delete(first);
                     }
@@ -516,33 +600,37 @@
                         targetX: x,
                         targetY: y,
                         targetQuadrant: quad,
+                        isAxisProblem: isAxisProblem,
                         quadClue: quadClue,
                         xClue: xClue,
                         yClue: yClue,
+                        fnType: fnType,
                         fnExpr: fnExpr,
-                        fullClue: fullClue
+                        fullClue: fullClue,
+                        evasionType: evasionType
                     };
                     break;
                 }
             }
 
-            // Fallback safety mission
             if (!mission) {
                 mission = {
                     targetX: -3,
                     targetY: 2,
                     targetQuadrant: 2,
+                    isAxisProblem: false,
                     quadClue: "x < 0 이고 y > 0",
                     xClue: "y축까지의 거리가 3인 음수",
                     yClue: "반비례 관계식 [ y = -6/x ] 위의 점",
+                    fnType: "inverse",
                     fnExpr: "y = -6/x",
-                    fullClue: "【음파 탐지】 x < 0 이고 y > 0 구역에 은폐 중!"
+                    fullClue: "【음파 탐지】 x < 0 이고 y > 0 구역에 은폐 중!",
+                    evasionType: "x_axis"
                 };
             }
             return mission;
         }
 
-        // Deterministic member merger and stable sort
         function mergeMembers(listA = [], listB = []) {
             const map = new Map();
             [...listA, ...listB].forEach(item => {
@@ -559,7 +647,6 @@
             );
         }
 
-        // Deterministic round-robin role distribution: every problem shifts by 1
         function getStageActorIndex(stage, teamSize, problemCount = 1) {
             if (teamSize <= 1) return 0;
             const shift = (Math.max(1, problemCount) - 1) % teamSize;
@@ -593,12 +680,13 @@
                 redStage: 0,
                 blueProblemCount: 1,
                 redProblemCount: 1,
-                blueMission: generateSonarMission(),
-                redMission: generateSonarMission(),
-                blueCrosshair: { quad: 0, x: null, y: null },
-                redCrosshair: { quad: 0, x: null, y: null },
+                blueMission: generateSonarMission(1),
+                redMission: generateSonarMission(1),
+                blueCrosshair: { quad: -1, x: null, y: null },
+                redCrosshair: { quad: -1, x: null, y: null },
                 lastHit: null,
                 lastLaunch: null,
+                lastPing: null,
                 updatedAt: Date.now()
             };
         }
@@ -623,7 +711,6 @@
             const myMemberObj = { name: currentUserName, joinedAt: Date.now() };
             document.getElementById('lobby-status').innerText = "심해 레이더 통신망에 접속 중입니다...";
 
-            // Setup dedicated BroadcastChannel for zero-latency local/multi-tab sync
             try {
                 if (window.BroadcastChannel) {
                     if (bc) bc.close();
@@ -655,7 +742,6 @@
 
             let initialData = null;
 
-            // Separate collection path: 'stealth_sonar_rooms' (zero collision with racer or tower defense)
             try {
                 if (!useFallback && db) {
                     const roomRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'stealth_sonar_rooms'), currentRoomCode);
@@ -694,9 +780,9 @@
 
             applyRoomState(initialData, true);
 
-            // Switch to Battle Arena
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('battle-screen').classList.remove('hidden');
+            
             initRadarCanvas();
             sfx.sonarPing();
         };
@@ -722,18 +808,26 @@
 
             lastKnownRoomData = data;
 
-            // Attack & Hit Detection
+            // Projectile Launch Animation
             if (data.lastLaunch && (!window.lastObservedLaunchId || window.lastObservedLaunchId !== data.lastLaunch.id)) {
                 window.lastObservedLaunchId = data.lastLaunch.id;
-                triggerTorpedoAnimation(data.lastLaunch.team, data.lastLaunch.x, data.lastLaunch.y);
+                triggerTorpedoAnimation(data.lastLaunch.team, data.lastLaunch.x, data.lastLaunch.y, data.lastLaunch.fnType);
             }
 
+            // Ship Hit Explosion
             if (data.lastHit && (!window.lastObservedHitId || window.lastObservedHitId !== data.lastHit.id)) {
                 window.lastObservedHitId = data.lastHit.id;
                 triggerShipExplosion(data.lastHit.victimTeam, data.lastHit.x, data.lastHit.y);
             }
 
-            // Update Fleets HUD
+            // 기믹 3: 팀원 캔버스 전술 핑(Ping) 수신
+            if (data.lastPing && (!window.lastObservedPingId || window.lastObservedPingId !== data.lastPing.id)) {
+                window.lastObservedPingId = data.lastPing.id;
+                if (data.lastPing.team === myTeam) {
+                    addTacticalPing(data.lastPing.coordX, data.lastPing.coordY, data.lastPing.sender);
+                }
+            }
+
             updateFleetsHUD(data.blueShips, data.redShips);
 
             const bMembers = (data.blueMembers || []).map(m => m.name || m);
@@ -741,10 +835,8 @@
             document.getElementById('blue-members').innerText = `소나 대원(${bMembers.length}명): ${bMembers.join(', ') || '대기 중'}`;
             document.getElementById('red-members').innerText = `소나 대원(${rMembers.length}명): ${rMembers.join(', ') || '대기 중'}`;
 
-            // Update Pipeline UI
             updatePipelineUI(data);
 
-            // Victory Check: First fleet to sink all 3 enemy warships wins!
             if ((data.blueShips <= 0 || data.redShips <= 0) && !battleEnded) {
                 battleEnded = true;
                 const winnerTeam = data.redShips <= 0 ? 'blue' : 'red';
@@ -801,28 +893,25 @@
 
             if (!currentMission) return;
 
-            // Target Ship Badge
             const destroyedEnemyCount = 3 - (team === 'blue' ? data.redShips : data.blueShips);
-            document.getElementById('current-target-name').innerText = `적 스텔스 전함 #${destroyedEnemyCount + 1}`;
+            document.getElementById('current-target-name').innerText = `적 스텔스 순양함 #${destroyedEnemyCount + 1}`;
 
-            // Clue Display based on stage progression
             const clueDisplay = document.getElementById('mission-clue-display');
             if (currentStage === 0) {
                 clueDisplay.innerText = currentMission.fullClue;
             } else if (currentStage === 1) {
-                clueDisplay.innerText = `【제${currentMission.targetQuadrant}사분면 색출 성공】 힌트: ${currentMission.xClue}`;
+                const qLabel = currentMission.targetQuadrant === 0 ? "좌표축 위 탐색" : `제${currentMission.targetQuadrant}사분면 색출`;
+                clueDisplay.innerText = `【${qLabel} 성공】 힌트: ${currentMission.xClue}`;
             } else if (currentStage === 2) {
                 clueDisplay.innerText = `【x = ${currentMission.targetX} 조준 완료】 힌트: ${currentMission.yClue}`;
             } else {
                 clueDisplay.innerText = `【최종 조준 완료: (${currentMission.targetX}, ${currentMission.targetY})】 심해 어뢰를 투하하여 전함을 격침하세요!`;
             }
 
-            // Crosshair Coordinate Label
-            const xLabel = myCrosshair.x !== null ? myCrosshair.x : '?';
-            const yLabel = myCrosshair.y !== null ? myCrosshair.y : '?';
+            const xLabel = (myCrosshair.x !== null && myCrosshair.x !== undefined) ? myCrosshair.x : '?';
+            const yLabel = (myCrosshair.y !== null && myCrosshair.y !== undefined) ? myCrosshair.y : '?';
             document.getElementById('crosshair-coord-label').innerText = `(${xLabel}, ${yLabel})`;
 
-            // My Team Badge
             const teamBadge = document.getElementById('my-team-badge');
             if (team === 'blue') {
                 teamBadge.innerText = `🔵 청해 블루 소나 [타겟 #${problemCount}]`;
@@ -845,7 +934,6 @@
             }
             prevWasMyTurn = isMyTurn;
 
-            // My Assigned Role Label
             const roleBadge = document.getElementById('my-role-badge');
             if (myIndex !== -1) {
                 roleBadge.innerText = `내 포지션: ${getRoleDescription(myIndex, teamSize, problemCount)}`;
@@ -856,7 +944,6 @@
                 roleBadge.innerText = "소나 관전 중";
             }
 
-            // Step Instruction & Control Toggling
             const instEl = document.getElementById('step-instruction');
             const quadControls = document.getElementById('quadrant-buttons-control');
             const numControls = document.getElementById('number-input-control');
@@ -866,7 +953,7 @@
             const stepNumInput = document.getElementById('step-number-input');
 
             if (currentStage === 0) {
-                instEl.innerText = "【1단계: 사분면 색출】 부호 힌트를 분석하여 적 전함이 위치한 사분면 버튼을 터치하세요!";
+                instEl.innerText = "【1단계: 사분면 색출】 부호 힌트를 분석하여 적 전함이 위치한 사분면 또는 축 버튼을 터치하세요!";
             } else if (currentStage === 1) {
                 instEl.innerText = "【2단계: X축 조준】 x좌표 힌트(거리/대칭/방정식)를 계산하여 정확한 X값을 입력하세요!";
             } else if (currentStage === 2) {
@@ -902,7 +989,6 @@
                 currentActorEl.innerText = `${activeMemberName} (${activeMemberIndex + 1}번 대원)`;
             }
 
-            // 4-Stage Tracker Cards
             const stageTitles = [
                 "① 사분면 색출",
                 "② X축 조준선",
@@ -948,12 +1034,15 @@
                     nextData.redStage = 1;
                     nextData.redCrosshair = { quad: chosenQuad, x: null, y: null };
                 }
-                showStepFeedback(`✨ [제${chosenQuad}사분면 포착] 소나 탐지망을 집중합니다! 2번 대원 X축 조준 개시!`, false);
+                const feedbackText = chosenQuad === 0 
+                    ? "✨ [좌표축 위 포착!] 경계 구역 락온! 2번 대원 X축 조준 개시!" 
+                    : `✨ [제${chosenQuad}사분면 포착!] 소나 탐지망 집중! 2번 대원 X축 조준 개시!`;
+                showStepFeedback(feedbackText, false);
                 nextData.updatedAt = Date.now();
                 await syncStateUpdate(nextData);
             } else {
                 sfx.error();
-                showStepFeedback(`❌ 사분면 판정 오류! 부호 (+, -) 조건을 다시 확인하세요!`, true);
+                showStepFeedback("❌ 사분면 판정 오류! 부호 (+, -)와 축 조건을 다시 확인하세요!", true);
             }
         };
 
@@ -973,7 +1062,6 @@
             const mission = myTeam === 'blue' ? data.blueMission : data.redMission;
 
             if (currentStage === 1) {
-                // Check X coordinate
                 if (val === mission.targetX) {
                     sfx.success();
                     const nextData = { ...data };
@@ -989,10 +1077,9 @@
                     await syncStateUpdate(nextData);
                 } else {
                     sfx.error();
-                    showStepFeedback(`❌ X좌표 불일치! 거리와 대칭 조건을 다시 계산하세요!`, true);
+                    showStepFeedback("❌ X좌표 불일치! 거리와 대칭 조건을 다시 계산하세요!", true);
                 }
             } else if (currentStage === 2) {
-                // Check Y coordinate
                 if (val === mission.targetY) {
                     sfx.success();
                     const nextData = { ...data };
@@ -1021,7 +1108,7 @@
 
             if (currentStage !== 3) return;
 
-            // Check if enemy performs Symmetry Evasion (기믹 1: 대칭이동 회피 기동)
+            // 기믹 1: 대칭이동 회피 기동 확인
             if (mission.evasionType && !window.evasionHandledThisTurn) {
                 window.evasionHandledThisTurn = true;
                 openSymmetryModal(mission);
@@ -1030,12 +1117,11 @@
 
             window.evasionHandledThisTurn = false;
             sfx.torpedoLaunch();
-            showStepFeedback(`🚀 어뢰 투하! 깊은 바다를 가르며 함수 궤적을 타고 적 스텔스 전함으로 돌진합니다!`, false);
+            showStepFeedback("🚀 어뢰 투하! 깊은 바다를 가르며 함수 궤적을 타고 적 스텔스 전함으로 돌진합니다!", false);
 
             const nextData = { ...data };
             const victimTeam = myTeam === 'blue' ? 'red' : 'blue';
 
-            // Register launch and hit animations
             nextData.lastLaunch = { 
                 team: myTeam, 
                 x: mission.targetX, 
@@ -1055,21 +1141,23 @@
 
                 hitData.lastHit = { victimTeam: victimTeam, x: mission.targetX, y: mission.targetY, id: Date.now() };
                 
-                // Reset stage and generate next target mission
+                const nextProblemCount = (myTeam === 'blue' ? (hitData.blueProblemCount || 1) : (hitData.redProblemCount || 1)) + 1;
+                const nextMission = generateSonarMission(nextProblemCount);
+
                 if (myTeam === 'blue') {
                     hitData.blueStage = 0;
-                    hitData.blueProblemCount = (hitData.blueProblemCount || 1) + 1;
-                    hitData.blueMission = generateSonarMission();
-                    hitData.blueCrosshair = { quad: 0, x: null, y: null };
+                    hitData.blueProblemCount = nextProblemCount;
+                    hitData.blueMission = nextMission;
+                    hitData.blueCrosshair = { quad: -1, x: null, y: null };
                 } else {
                     hitData.redStage = 0;
-                    hitData.redProblemCount = (hitData.redProblemCount || 1) + 1;
-                    hitData.redMission = generateSonarMission();
-                    hitData.redCrosshair = { quad: 0, x: null, y: null };
+                    hitData.redProblemCount = nextProblemCount;
+                    hitData.redMission = nextMission;
+                    hitData.redCrosshair = { quad: -1, x: null, y: null };
                 }
 
                 sfx.shipExplosion();
-                showStepFeedback(`💥 [DIRECT HIT!] 적 전함 격침 성공! 다음 타겟으로 소나를 회전합니다! (역할 자동 순환)`, false);
+                showStepFeedback("💥 [DIRECT HIT!] 적 전함 격침 성공! 다음 타겟으로 소나를 회전합니다! (역할 자동 순환)", false);
                 hitData.updatedAt = Date.now();
                 await syncStateUpdate(hitData);
             }, 1400);
@@ -1091,15 +1179,15 @@
 
             let evasionDesc = "";
             if (mission.evasionType === 'x_axis') {
-                evasionDesc = "적함이 [x축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (x, -y) 수정 좌표를 입력하세요!";
+                evasionDesc = "적함이 [x축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (x, -y) 공식으로 수정 좌표를 입력하세요!";
                 currentEvasionExpectedX = mission.targetX;
                 currentEvasionExpectedY = -mission.targetY;
             } else if (mission.evasionType === 'y_axis') {
-                evasionDesc = "적함이 [y축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, y) 수정 좌표를 입력하세요!";
+                evasionDesc = "적함이 [y축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, y) 공식으로 수정 좌표를 입력하세요!";
                 currentEvasionExpectedX = -mission.targetX;
                 currentEvasionExpectedY = mission.targetY;
             } else {
-                evasionDesc = "적함이 [원점(O)]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, -y) 수정 좌표를 입력하세요!";
+                evasionDesc = "적함이 [원점(O)]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, -y) 공식으로 수정 좌표를 입력하세요!";
                 currentEvasionExpectedX = -mission.targetX;
                 currentEvasionExpectedY = -mission.targetY;
             }
@@ -1124,11 +1212,10 @@
                 document.getElementById('symmetry-modal').classList.add('hidden');
                 showStepFeedback(`🎯 [대칭 회피 격파!] 수정 좌표 (${inputX}, ${inputY}) 추적 완료! 어뢰를 발사합니다!`, false);
                 
-                // Update mission target to evasion point
                 const mission = myTeam === 'blue' ? lastKnownRoomData.blueMission : lastKnownRoomData.redMission;
                 mission.targetX = currentEvasionExpectedX;
                 mission.targetY = currentEvasionExpectedY;
-                mission.evasionType = null; // Evasion resolved
+                mission.evasionType = null;
                 
                 window.launchTorpedoStep();
             } else {
@@ -1136,6 +1223,343 @@
                 showStepFeedback("❌ 대칭이동 부호 계산 오류! x축 대칭: (x, -y) / y축 대칭: (-x, y) / 원점: (-x, -y)", true);
             }
         };
+
+        function showStepFeedback(text, isError) {
+            const el = document.getElementById('battle-feedback');
+            el.innerText = text;
+            el.className = isError 
+                ? "text-sm font-bold text-rose-400 min-h-[24px] mt-3 animate-pulse" 
+                : "text-sm font-bold text-emerald-400 min-h-[24px] mt-3";
+        }
+
+        window.sendQuickCheer = function(text) {
+            showStepFeedback(`📻 [소나 무전] ${text}`, false);
+            sfx.playTone(550, 'sine', 0.12, 0.2);
+        };
+
+        window.showCustomModal = function(title, msg) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerText = msg;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        };
+
+        window.closeCustomModal = function() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        };
+
+        function triggerGrandVictory(winnerTeam, roomData) {
+            sfx.victoryFanfare();
+            const isBlueWin = winnerTeam === 'blue';
+            const winnerName = isBlueWin ? "🔵 청해 함대 (블루 소나)" : "🔴 홍해 함대 (레드 헌터)";
+            const rawMembers = isBlueWin ? roomData.blueMembers : roomData.redMembers;
+            const members = (rawMembers || []).map(m => m.name || m);
+
+            document.getElementById('victory-team-title').innerText = `${winnerName} 대승리!`;
+            document.getElementById('victory-members-list').innerText = members.length > 0 ? members.join(', ') : '단독 항해관';
+            document.getElementById('victory-total-time').innerText = `${((Date.now() - missionStartTime) / 1000).toFixed(1)}초`;
+
+            setTimeout(() => {
+                document.getElementById('victory-modal').classList.remove('hidden');
+            }, 1200);
+        }
+
+        let canvas, ctx;
+        let radarSweepAngle = 0;
+        let tacticalPings = [];
+        let torpedoProjectiles = [];
+        let explosions = [];
+
+        function initRadarCanvas() {
+            canvas = document.getElementById('radar-canvas');
+            ctx = canvas.getContext('2d');
+            resizeRadarCanvas();
+            window.addEventListener('resize', resizeRadarCanvas);
+
+            // 기믹 3: 캔버스 터치/클릭으로 팀 전술 핑(Ping) 공유
+            canvas.addEventListener('click', handleCanvasPing);
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches && e.touches[0]) {
+                    const touch = e.touches[0];
+                    const rect = canvas.getBoundingClientRect();
+                    const clientX = touch.clientX - rect.left;
+                    const clientY = touch.clientY - rect.top;
+                    triggerPingFromCanvas(clientX, clientY);
+                }
+            });
+
+            requestAnimationFrame(renderRadarLoop);
+        }
+
+        function resizeRadarCanvas() {
+            if (!canvas || !canvas.parentElement) return;
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+
+        function handleCanvasPing(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            triggerPingFromCanvas(x, y);
+        }
+
+        function triggerPingFromCanvas(canvasX, canvasY) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = Math.min(canvas.width, canvas.height) / 11.5;
+
+            const mathX = Math.round((canvasX - cx) / scale);
+            const mathY = Math.round((cy - canvasY) / scale);
+
+            if (Math.abs(mathX) <= 5 && Math.abs(mathY) <= 5) {
+                sfx.tacticalPing();
+                addTacticalPing(mathX, mathY, currentUserName || '대원');
+                
+                // Broadcast Ping to teammates
+                if (lastKnownRoomData) {
+                    const pingData = { ...lastKnownRoomData };
+                    pingData.lastPing = {
+                        team: myTeam,
+                        coordX: mathX,
+                        coordY: mathY,
+                        sender: currentUserName || '대원',
+                        id: Date.now() + Math.random()
+                    };
+                    syncStateUpdate(pingData);
+                }
+            }
+        }
+
+        function addTacticalPing(mathX, mathY, sender) {
+            tacticalPings.push({
+                mathX: mathX,
+                mathY: mathY,
+                sender: sender,
+                radius: 4,
+                maxRadius: 36,
+                alpha: 1
+            });
+        }
+
+        function triggerTorpedoAnimation(team, targetX, targetY, fnType) {
+            torpedoProjectiles.push({
+                team: team,
+                targetX: targetX,
+                targetY: targetY,
+                fnType: fnType || 'direct',
+                progress: 0
+            });
+        }
+
+        function triggerShipExplosion(victimTeam, targetX, targetY) {
+            for (let i = 0; i < 35; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 1.5;
+                explosions.push({
+                    mathX: targetX,
+                    mathY: targetY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 4 + 2,
+                    color: victimTeam === 'red' ? '#fb7185' : '#38bdf8',
+                    alpha: 1
+                });
+            }
+        }
+
+        function renderRadarLoop() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const maxR = Math.min(w, h) * 0.46;
+            const scale = maxR / 5.2;
+
+            // 1. Radar Circular Background
+            ctx.save();
+            ctx.fillStyle = '#01151a';
+            ctx.beginPath();
+            ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#0f766e';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Concentric Range Rings (1, 2, 3, 4, 5)
+            ctx.strokeStyle = 'rgba(20, 184, 166, 0.25)';
+            ctx.lineWidth = 1;
+            for (let r = 1; r <= 5; r++) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Quadrant Background Shading & Labels
+            ctx.font = 'bold 13px font-sonar, sans-serif';
+            ctx.fillStyle = 'rgba(45, 212, 191, 0.25)';
+            ctx.fillText("제2사분면 (-, +)", cx - maxR * 0.55, cy - maxR * 0.5);
+            ctx.fillText("제1사분면 (+, +)", cx + maxR * 0.2, cy - maxR * 0.5);
+            ctx.fillText("제3사분면 (-, -)", cx - maxR * 0.55, cy + maxR * 0.6);
+            ctx.fillText("제4사분면 (+, -)", cx + maxR * 0.2, cy + maxR * 0.6);
+
+            // 2. Coordinate Grid Lines (-5 to 5)
+            ctx.strokeStyle = 'rgba(20, 184, 166, 0.12)';
+            ctx.lineWidth = 1;
+            for (let i = -5; i <= 5; i++) {
+                if (i === 0) continue;
+                // Vertical grid
+                ctx.beginPath();
+                ctx.moveTo(cx + i * scale, cy - maxR);
+                ctx.lineTo(cx + i * scale, cy + maxR);
+                ctx.stroke();
+                // Horizontal grid
+                ctx.beginPath();
+                ctx.moveTo(cx - maxR, cy - i * scale);
+                ctx.lineTo(cx + maxR, cy - i * scale);
+                ctx.stroke();
+            }
+
+            // 3. Thick Main Coordinate Axes: X & Y
+            ctx.strokeStyle = '#2dd4bf';
+            ctx.lineWidth = 2.5;
+            // X-Axis
+            ctx.beginPath();
+            ctx.moveTo(cx - maxR, cy);
+            ctx.lineTo(cx + maxR, cy);
+            ctx.stroke();
+            // Y-Axis
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - maxR);
+            ctx.lineTo(cx, cy + maxR);
+            ctx.stroke();
+
+            // Coordinate Axis Numbers
+            ctx.font = 'bold 10px monospace';
+            ctx.fillStyle = '#5eead4';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let i = -5; i <= 5; i++) {
+                if (i === 0) continue;
+                ctx.fillText(i, cx + i * scale, cy + 12);
+                ctx.fillText(i, cx - 12, cy - i * scale);
+            }
+            ctx.fillText("O", cx - 8, cy + 10);
+            ctx.fillText("x", cx + maxR - 8, cy - 10);
+            ctx.fillText("y", cx + 10, cy - maxR + 10);
+
+            // 4. Rotating Sonar Sweep Beam
+            radarSweepAngle += 0.025;
+            const sweepGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+            sweepGrad.addColorStop(0, 'rgba(20, 184, 166, 0.4)');
+            sweepGrad.addColorStop(1, 'rgba(20, 184, 166, 0.0)');
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, maxR, radarSweepAngle - 0.35, radarSweepAngle);
+            ctx.closePath();
+            ctx.fillStyle = sweepGrad;
+            ctx.fill();
+
+            // Leading bright sweep line
+            ctx.strokeStyle = '#5eead4';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(radarSweepAngle) * maxR, cy + Math.sin(radarSweepAngle) * maxR);
+            ctx.stroke();
+            ctx.restore();
+
+            // 5. Draw Active Team Guidelines & Function Curves
+            if (lastKnownRoomData) {
+                const data = lastKnownRoomData;
+                const mission = myTeam === 'blue' ? data.blueMission : data.redMission;
+                const crosshair = myTeam === 'blue' ? data.blueCrosshair : data.redCrosshair;
+                const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
+                drawTeamCrosshair(crosshair, myTeam, cx, cy, scale, mission, currentStage);
+            }
+
+            // 6. Draw & Update Tactical Pings
+            for (let i = tacticalPings.length - 1; i >= 0; i--) {
+                const p = tacticalPings[i];
+                p.radius += 0.8;
+                p.alpha -= 0.025;
+
+                const px = cx + p.mathX * scale;
+                const py = cy - p.mathY * scale;
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(250, 204, 21, ${p.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(px, py, p.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = `rgba(254, 240, 138, ${p.alpha})`;
+                ctx.font = 'bold 11px font-sonar, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`📍 ${p.sender}`, px, py - p.radius - 4);
+                ctx.restore();
+
+                if (p.alpha <= 0) tacticalPings.splice(i, 1);
+            }
+
+            // 7. Draw & Update Torpedo Flight Animation
+            for (let i = torpedoProjectiles.length - 1; i >= 0; i--) {
+                const torp = torpedoProjectiles[i];
+                torp.progress += 0.035;
+
+                const targetPx = cx + torp.targetX * scale;
+                const targetPy = cy - torp.targetY * scale;
+
+                let curPx = cx + (targetPx - cx) * torp.progress;
+                let curPy = cy + (targetPy - cy) * torp.progress;
+
+                // Function trajectory bend
+                if (torp.fnType === 'inverse' && torp.targetX !== 0) {
+                    const arcOffset = Math.sin(torp.progress * Math.PI) * 25;
+                    curPy -= arcOffset;
+                }
+
+                ctx.save();
+                ctx.fillStyle = '#facc15';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(curPx, curPy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (torp.progress >= 1) torpedoProjectiles.splice(i, 1);
+            }
+
+            // 8. Draw & Update Explosion Sparks
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                const exp = explosions[i];
+                exp.mathX += exp.vx * 0.01;
+                exp.mathY += exp.vy * 0.01;
+                exp.alpha -= 0.03;
+
+                const px = cx + exp.mathX * scale;
+                const py = cy - exp.mathY * scale;
+
+                ctx.save();
+                ctx.globalAlpha = exp.alpha;
+                ctx.fillStyle = exp.color;
+                ctx.beginPath();
+                ctx.arc(px, py, exp.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (exp.alpha <= 0) explosions.splice(i, 1);
+            }
+
+            ctx.restore();
+            requestAnimationFrame(renderRadarLoop);
+        }
 
         function drawTeamCrosshair(crosshair, team, cx, cy, scale, mission, currentStage) {
             if (!crosshair) return;
@@ -1145,34 +1569,39 @@
             // Highlight selected quadrant (Step 0)
             if (crosshair.quad !== undefined && crosshair.quad > 0) {
                 ctx.save();
-                ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.08)' : 'rgba(251, 113, 133, 0.08)';
+                ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.12)' : 'rgba(251, 113, 133, 0.12)';
                 const q = crosshair.quad;
                 const signX = (q === 1 || q === 4) ? 1 : -1;
                 const signY = (q === 1 || q === 2) ? -1 : 1;
                 ctx.fillRect(cx, cy, signX * scale * 5.2, signY * scale * 5.2);
                 ctx.restore();
+            } else if (crosshair.quad === 0) {
+                // Highlight axis region
+                ctx.save();
+                ctx.fillStyle = 'rgba(250, 204, 21, 0.18)';
+                ctx.fillRect(cx - scale * 5.2, cy - 8, scale * 10.4, 16);
+                ctx.fillRect(cx - 8, cy - scale * 5.2, 16, scale * 10.4);
+                ctx.restore();
             }
 
-            // Draw Mathematical Function Trajectory Curve (기믹 3: 정비례 직선 및 반비례 쌍곡선 시각화)
+            // 기믹 3: 정비례 직선 및 반비례 쌍곡선 시각화
             if (mission && currentStage >= 2 && mission.targetX !== 0 && mission.targetY !== 0) {
                 ctx.save();
-                ctx.strokeStyle = isBlue ? 'rgba(56, 189, 248, 0.45)' : 'rgba(251, 113, 133, 0.45)';
+                ctx.strokeStyle = isBlue ? 'rgba(56, 189, 248, 0.65)' : 'rgba(251, 113, 133, 0.65)';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
 
                 if (mission.fnType === 'direct') {
-                    // Direct proportionality: y = ax (Line passing through origin)
                     const a = mission.targetY / mission.targetX;
                     const x1 = -5, y1 = a * x1;
                     const x2 = 5, y2 = a * x2;
                     ctx.moveTo(cx + x1 * scale, cy - y1 * scale);
                     ctx.lineTo(cx + x2 * scale, cy - y2 * scale);
                 } else if (mission.fnType === 'inverse') {
-                    // Inverse proportionality: y = a/x (Hyperbola in 2 quadrants)
                     const a = mission.targetX * mission.targetY;
                     let started = false;
                     for (let stepX = -5; stepX <= 5; stepX += 0.2) {
-                        if (Math.abs(stepX) < 0.3) { started = false; continue; }
+                        if (Math.abs(stepX) < 0.25) { started = false; continue; }
                         const stepY = a / stepX;
                         if (Math.abs(stepY) > 5.5) continue;
                         const px = cx + stepX * scale;
@@ -1183,8 +1612,7 @@
                 }
                 ctx.stroke();
 
-                // Trajectory Label
-                ctx.font = 'bold 11px font-mono, sans-serif';
+                ctx.font = 'bold 11px font-mono, monospace';
                 ctx.fillStyle = isBlue ? '#7dd3fc' : '#fda4af';
                 ctx.fillText(`궤적: ${mission.fnExpr}`, cx + mission.targetX * scale + 14, cy - mission.targetY * scale + 16);
                 ctx.restore();
@@ -1197,8 +1625,8 @@
                 ctx.lineWidth = 1.5;
                 ctx.setLineDash([5, 5]);
                 ctx.beginPath();
-                ctx.moveTo(px, 0);
-                ctx.lineTo(px, canvas.height);
+                ctx.moveTo(px, cy - scale * 5.2);
+                ctx.lineTo(px, cy + scale * 5.2);
                 ctx.stroke();
                 ctx.setLineDash([]);
             }
@@ -1212,30 +1640,30 @@
                 ctx.lineWidth = 1.5;
                 ctx.setLineDash([5, 5]);
                 ctx.beginPath();
-                ctx.moveTo(0, py);
-                ctx.lineTo(canvas.width, py);
+                ctx.moveTo(cx - scale * 5.2, py);
+                ctx.lineTo(cx + scale * 5.2, py);
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // Pulsing Target Lock Crosshair
+                // Target Lock Reticle
                 ctx.save();
                 ctx.strokeStyle = '#facc15';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(px, py, 12, 0, Math.PI * 2);
+                ctx.arc(px, py, 13, 0, Math.PI * 2);
                 ctx.stroke();
 
                 ctx.beginPath();
-                ctx.moveTo(px - 16, py);
-                ctx.lineTo(px + 16, py);
-                ctx.moveTo(px, py - 16);
-                ctx.lineTo(px, py + 16);
+                ctx.moveTo(px - 18, py);
+                ctx.lineTo(px + 18, py);
+                ctx.moveTo(px, py - 18);
+                ctx.lineTo(px, py + 18);
                 ctx.stroke();
 
-                ctx.font = 'bold 11px font-mono, sans-serif';
+                ctx.font = 'bold 11px font-mono, monospace';
                 ctx.fillStyle = '#fef08a';
                 ctx.textAlign = 'left';
-                ctx.fillText(`LOCK: (${crosshair.x}, ${crosshair.y})`, px + 15, py - 10);
+                ctx.fillText(`LOCK: (${crosshair.x}, ${crosshair.y})`, px + 16, py - 10);
                 ctx.restore();
             }
         }
