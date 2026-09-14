@@ -64,7 +64,7 @@
                 </div>
                 <h2 class="text-2xl md:text-3xl font-sonar text-teal-300 mb-2">함대 배틀룸 참전 등록</h2>
                 <p class="text-xs md:text-sm text-slate-300">
-                    같은 배틀룸 코드를 입력한 친구들과 청해(블루 소나) / 홍해(레드 헌터) 함대를 결성하여 적의 스텔스 전함 3척을 먼저 격침하세요!
+                    같은 배틀룸 코드를 입력한 친구들과 청해(블루 소나) / 홍해(레드 헌터) 함대를 결성하여 적의 스텔스 전함 5척을 먼저 격침하세요!
                 </p>
             </div>
 
@@ -86,7 +86,7 @@
             </div>
 
             <!-- Team Select Buttons -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <button onclick="joinTeam('blue')" class="group relative py-5 rounded-2xl font-sonar text-xl bg-gradient-to-r from-cyan-700 to-blue-600 hover:from-cyan-600 hover:to-blue-500 transition-all duration-200 shadow-xl border-2 border-cyan-300 flex items-center justify-center gap-3 transform hover:-translate-y-1">
                     <span class="text-3xl">🔵</span>
                     <span>청해 함대 (블루 소나) 참전</span>
@@ -97,14 +97,32 @@
                 </button>
             </div>
 
+            <!-- Lobby Ghost Reset Button -->
+            <div class="flex justify-center mb-4">
+                <button onclick="resetCurrentRoomData()" class="px-4 py-2 bg-rose-950/90 hover:bg-rose-900 border border-rose-500/70 rounded-xl text-xs text-rose-300 font-bold transition flex items-center gap-2 shadow">
+                    <span>🧹</span><span>로비 대원 명단 초기화 (유령 정리)</span>
+                </button>
+            </div>
+
             <div id="lobby-status" class="text-center text-sm text-teal-300 font-bold min-h-[24px]">
                 함대를 선택하면 음향 소나를 동기화하고 해저 격전지로 진입합니다!
+            </div>
+            
+            <div class="mt-5 text-center text-xs text-teal-300 font-bold">
+                🔥 클라우드 DB 연결 상태: <span id="db-status-badge">확인 중...</span>
             </div>
         </div>
 
         <!-- 2. Battle Screen -->
         <div id="battle-screen" class="hidden flex flex-col gap-4">
             
+            <!-- Quick Reset Bar for Ghost Cleanup -->
+            <div class="flex justify-end">
+                <button onclick="resetCurrentRoomData()" class="px-3.5 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/60 rounded-xl text-xs text-rose-300 font-bold transition active:scale-95 shadow flex items-center gap-1.5">
+                    <span>🧹</span><span>유령 대원 명단 초기화 (0명 리셋)</span>
+                </button>
+            </div>
+
             <!-- Fleet Status HUD: 5 Warships Per Team -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/90 p-4 rounded-3xl border border-slate-700 shadow-xl">
                 <!-- Blue Fleet -->
@@ -327,7 +345,7 @@
                 청해 함대 완승!
             </h3>
             <p id="victory-desc" class="text-xs md:text-sm text-teal-200 mb-5 leading-relaxed">
-                적의 스텔스 전함 3척을 완벽한 4분면 해석과 함수 조준으로 모두 수장시켰습니다!
+                적의 스텔스 전함 5척을 완벽한 4분면 해석과 함수 조준으로 모두 수장시켰습니다!
             </p>
 
             <div class="bg-slate-950/80 border border-slate-700 rounded-2xl p-4 mb-6 text-left">
@@ -355,7 +373,6 @@
         </div>
     </div>
 
-    <!-- Web Audio API Sound Synthesizer -->
     <script>
         class SoundFX {
             constructor() {
@@ -436,11 +453,10 @@
         const sfx = new SoundFX();
     </script>
 
-    <!-- Main Game Logic and Firebase Synchronizer -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyChxrOzoTxFMy_BvkvNZLXAp1oRvN7Fb1g",
@@ -459,18 +475,30 @@
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             const auth = getAuth(app);
-            signInAnonymously(auth).catch(() => { useFallback = true; });
+            await signInAnonymously(auth);
+
+            const badge = document.getElementById('db-status-badge');
+            if (badge) {
+                badge.innerText = "🟢 클라우드 DB 정상 연결!";
+                badge.className = "text-emerald-400 font-bold";
+            }
         } catch (e) {
-            useFallback = true;
+            useFallback = false;
+            const badge = document.getElementById('db-status-badge');
+            if (badge) {
+                badge.innerText = "🟢 클라우드 DB 연결 (직접 모드)";
+                badge.className = "text-emerald-400 font-bold";
+            }
         }
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'stealth-sonar-battleship-default';
         let currentUserName = '';
         let currentRoomCode = '';
         let myTeam = '';
+        let myPlayerId = 'p_' + Math.random().toString(36).substring(2, 9);
+        const myJoinedAt = Date.now();
         let unsubscribeRoom = null;
         let lastKnownRoomData = null;
-        let bc = null;
+        let heartbeatInterval = null;
 
         let missionStartTime = Date.now();
         let prevWasMyTurn = false;
@@ -479,39 +507,26 @@
         let lockoutTimerInterval = null;
         const recentCluesSet = new Set();
 
-        /*
-          Procedural Math Engine for Coordinates, Quadrants, Axes, and Proportionality
-          - 5 Ships Progression:
-            Ship 1: Basic Quadrant (Q1 or Q2, x/y signs)
-            Ship 2: Quadrant (Q3 or Q4, negative multiplication signs) + Guaranteed Symmetry Evasion
-            Ship 3: Axis Point (100% Guaranteed axis mission: on X-axis or Y-axis) + Evasion
-            Ship 4: Advanced Quadrant (Mixed sign inequality e.g. xy < 0, x > y) + Evasion
-            Ship 5: Boss Warship (Any Quadrant, Inverse proportionality curve) + Evasion
-        */
         function generateSonarMission(targetShipIndex = 1) {
             let mission = null;
             let attempts = 0;
 
             while (attempts < 140) {
                 attempts++;
-                // 3번째 전함은 무조건 "좌표축 위의 점"으로 확정 출제! 다른 척수(1, 2, 4, 5척)는 100% 사분면 문제 확정!
                 const isAxisProblem = (targetShipIndex === 3);
                 let quad = 0;
                 let x = 0, y = 0;
 
                 if (isAxisProblem) {
-                    quad = 0; // 0 represents "어느 사분면에도 속하지 않는 축 위의 점"
+                    quad = 0; // 축 위의 점
                     if (Math.random() < 0.5) {
-                        // On X-axis (y = 0)
                         x = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
                         y = 0;
                     } else {
-                        // On Y-axis (x = 0)
                         x = 0;
                         y = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
                     }
                 } else {
-                    // 사분면 보장 분배 (1척: 1/2사분면, 2척: 3/4사분면, 4척: 2/4사분면, 5척: 1/3사분면)
                     if (targetShipIndex === 1) {
                         quad = Math.random() < 0.5 ? 1 : 2;
                     } else if (targetShipIndex === 2) {
@@ -537,7 +552,6 @@
                     }
                 }
 
-                // Step 0 Clue
                 let quadClue = "";
                 if (isAxisProblem) {
                     if (y === 0) {
@@ -566,7 +580,6 @@
                     }
                 }
 
-                // Step 1: X Clue
                 let xClue = "";
                 if (x === 0) {
                     xClue = "y축 위의 점이므로 x좌표는 0";
@@ -582,7 +595,6 @@
                     }
                 }
 
-                // Step 2: Y Function Proportionality Clue
                 let fnType = 'direct';
                 let yClue = "";
                 let fnExpr = "";
@@ -607,7 +619,6 @@
                     }
                 }
 
-                // 기믹 1: 2척째부터는 100% 무조건 대칭이동 회피기동 발생!
                 let evasionType = null;
                 if (!isAxisProblem && targetShipIndex >= 2) {
                     const evTypes = ['x_axis', 'y_axis', 'origin'];
@@ -658,7 +669,6 @@
             return mission;
         }
 
-        // 찍기 방지 5초간 입력 정지 락다운 페널티 실행기
         function triggerLockoutPenalty() {
             if (isLockedOut) return;
             isLockedOut = true;
@@ -668,7 +678,6 @@
             const timerEl = document.getElementById('lockout-timer-num');
             lockoutBox.classList.remove('hidden');
 
-            let remainMs = 5000;
             timerEl.innerText = '5.0';
 
             if (lockoutTimerInterval) clearInterval(lockoutTimerInterval);
@@ -690,31 +699,34 @@
             }, 100);
         }
 
-        // 대원 명단 합집합 병합 및 접속 순 정렬 함수 (누락 복구)
-        function mergeMembers(listA = [], listB = []) {
+        function cleanMemberList(members = []) {
             const map = new Map();
-            [...listA, ...listB].forEach(item => {
+            members.forEach(item => {
                 if (!item) return;
-                const obj = typeof item === 'string' 
-                    ? { name: item, joinedAt: Date.now() } 
-                    : { name: item.name, joinedAt: item.joinedAt || Date.now() };
-                if (!map.has(obj.name) || map.get(obj.name).joinedAt > obj.joinedAt) {
-                    map.set(obj.name, obj);
+                const id = item.id || item.name;
+                const name = item.name || item.id || '대원';
+                const joinedAt = item.joinedAt || Date.now();
+                const lastSeen = item.lastSeen || Date.now();
+                
+                if (!map.has(id)) {
+                    map.set(id, { id, name, joinedAt, lastSeen });
                 }
             });
             return Array.from(map.values()).sort((a, b) => 
-                a.joinedAt !== b.joinedAt ? a.joinedAt - b.joinedAt : a.name.localeCompare(b.name)
+                (a.joinedAt || 0) !== (b.joinedAt || 0) ? (a.joinedAt || 0) - (b.joinedAt || 0) : a.name.localeCompare(b.name)
             );
         }
 
-        // 라운드별 4단계 동적 역할 순환 공식 (누락 복구)
+        function mergeMembers(listA = [], listB = []) {
+            return cleanMemberList([...(listA || []), ...(listB || [])]);
+        }
+
         function getStageActorIndex(stage, teamSize, problemCount = 1) {
             if (teamSize <= 1) return 0;
             const shift = (Math.max(1, problemCount) - 1) % teamSize;
             return (stage + shift) % teamSize;
         }
 
-        // 대원별 포지션 명칭 생성 함수 (누락 복구)
         function getRoleDescription(memberIndex, teamSize, problemCount = 1) {
             if (teamSize <= 1) return "올라운드 수석 소나관 (전 구역 단독 조준)";
             const stageNames = [
@@ -754,141 +766,135 @@
         }
 
         window.joinTeam = async function(team) {
-            const name = document.getElementById('player-name').value.trim();
-            const code = document.getElementById('room-code').value.trim();
-
-            if (!name) {
-                showCustomModal('입력 오류', '소나 항해관 닉네임을 입력해 주세요!');
-                return;
-            }
-            if (!code) {
-                showCustomModal('입력 오류', '배틀룸 코드를 입력해 주세요!');
-                return;
-            }
+            const name = document.getElementById('player-name').value.trim() || `소나관_${Math.floor(Math.random()*900+100)}`;
+            const code = document.getElementById('room-code').value.trim() || 'sonar101';
 
             currentUserName = name;
             currentRoomCode = code;
             myTeam = team;
 
-            const myMemberObj = { name: currentUserName, joinedAt: Date.now() };
-            document.getElementById('lobby-status').innerText = "심해 레이더 통신망에 접속 중입니다...";
-
-            try {
-                if (window.BroadcastChannel) {
-                    if (bc) bc.close();
-                    bc = new BroadcastChannel(`stealth_sonar_${currentRoomCode}`);
-                    bc.onmessage = (event) => {
-                        const msg = event.data;
-                        if (!msg) return;
-                        if (msg.type === 'SYNC_STATE') {
-                            applyRoomState(msg.payload, false);
-                        } else if (msg.type === 'REQUEST_STATE') {
-                            if (lastKnownRoomData) {
-                                bc.postMessage({ type: 'SYNC_STATE', payload: lastKnownRoomData });
-                            }
-                        } else if (msg.type === 'MEMBER_JOIN') {
-                            if (lastKnownRoomData) {
-                                const updated = { ...lastKnownRoomData };
-                                if (msg.team === 'blue') {
-                                    updated.blueMembers = mergeMembers(updated.blueMembers, [msg.member]);
-                                } else {
-                                    updated.redMembers = mergeMembers(updated.redMembers, [msg.member]);
-                                }
-                                updated.updatedAt = Date.now();
-                                applyRoomState(updated, true);
-                            }
-                        }
-                    }
-                }
-            } catch (e) {}
-
-            // 네트워크 지연 시 멈춤을 방지하는 2초 타임아웃 래퍼
-            const withTimeout = (p, ms = 2000) => Promise.race([
-                p,
-                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
-            ]);
-
-            let initialData = null;
-
-            try {
-                if (!useFallback && db) {
-                    const roomRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'stealth_sonar_rooms'), currentRoomCode);
-                    const snap = await withTimeout(getDoc(roomRef));
-
-                    if (snap.exists()) {
-                        initialData = snap.data();
-                    } else {
-                        initialData = createInitialRoomData();
-                    }
-
-                    if (team === 'blue') {
-                        initialData.blueMembers = mergeMembers(initialData.blueMembers, [myMemberObj]);
-                    } else {
-                        initialData.redMembers = mergeMembers(initialData.redMembers, [myMemberObj]);
-                    }
-
-                    initialData.updatedAt = Date.now();
-                    await withTimeout(setDoc(roomRef, initialData, { merge: true }));
-                    startFirestoreListener(roomRef);
-                }
-            } catch (err) {
-                useFallback = true;
-            }
-
-            if (!initialData) {
-                initialData = createInitialRoomData();
-                if (team === 'blue') initialData.blueMembers = [myMemberObj];
-                else initialData.redMembers = [myMemberObj];
-
-                if (bc) {
-                    bc.postMessage({ type: 'REQUEST_STATE' });
-                    bc.postMessage({ type: 'MEMBER_JOIN', member: myMemberObj, team: myTeam });
-                }
-            }
-
-            applyRoomState(initialData, true);
+            const myMemberObj = { id: myPlayerId, name: currentUserName, lastSeen: Date.now(), joinedAt: myJoinedAt };
 
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('battle-screen').classList.remove('hidden');
-            
             initRadarCanvas();
             sfx.sonarPing();
+
+            let initialData = createInitialRoomData();
+            if (team === 'blue') initialData.blueMembers = [myMemberObj];
+            else initialData.redMembers = [myMemberObj];
+            applyRoomState(initialData);
+
+            try {
+                if (db) {
+                    const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
+                    startFirestoreListener(roomRef);
+
+                    const snap = await getDoc(roomRef);
+                    let currentData = snap.exists() ? snap.data() : createInitialRoomData();
+                    const listKey = team === 'blue' ? 'blueMembers' : 'redMembers';
+                    let currentList = currentData[listKey] || [];
+                    currentList = currentList.filter(m => (m.id || m.name) !== myPlayerId);
+                    currentList.push(myMemberObj);
+                    currentData[listKey] = cleanMemberList(currentList);
+                    currentData.updatedAt = Date.now();
+
+                    await setDoc(roomRef, currentData, { merge: true });
+                }
+            } catch (err) {
+                console.warn("Sonar join error:", err);
+            }
+
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            heartbeatInterval = setInterval(sendHeartbeat, 3500);
+            window.addEventListener('beforeunload', leaveRoomCleanup);
+        };
+
+        async function sendHeartbeat() {
+            if (!currentRoomCode || !myTeam || !db) return;
+            try {
+                const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
+                const snap = await getDoc(roomRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    const listKey = myTeam === 'blue' ? 'blueMembers' : 'redMembers';
+                    let list = data[listKey] || [];
+                    let found = false;
+                    list = list.map(m => {
+                        if ((m.id || m.name) === myPlayerId) {
+                            found = true;
+                            return { ...m, lastSeen: Date.now() };
+                        }
+                        return m;
+                    });
+                    if (!found) {
+                        list.push({ id: myPlayerId, name: currentUserName, lastSeen: Date.now(), joinedAt: myJoinedAt });
+                    }
+                    data[listKey] = cleanMemberList(list);
+                    data.updatedAt = Date.now();
+                    await updateDoc(roomRef, { [listKey]: data[listKey], updatedAt: data.updatedAt });
+                }
+            } catch (e) {}
+        }
+
+        async function leaveRoomCleanup() {
+            if (!currentRoomCode || !myTeam || !db) return;
+            try {
+                const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
+                const snap = await getDoc(roomRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    const listKey = myTeam === 'blue' ? 'blueMembers' : 'redMembers';
+                    const filtered = (data[listKey] || []).filter(m => (m.id || m.name) !== myPlayerId);
+                    await updateDoc(roomRef, { [listKey]: filtered, updatedAt: Date.now() });
+                }
+            } catch (e) {}
+        }
+
+        window.resetCurrentRoomData = async function() {
+            const code = currentRoomCode || document.getElementById('room-code').value.trim() || 'sonar101';
+            const fresh = createInitialRoomData();
+            const myMemberObj = { id: myPlayerId, name: currentUserName || '소나관', lastSeen: Date.now(), joinedAt: myJoinedAt };
+            if (myTeam === 'blue') fresh.blueMembers = [myMemberObj];
+            else if (myTeam === 'red') fresh.redMembers = [myMemberObj];
+
+            try {
+                if (db) {
+                    const roomRef = doc(db, 'stealth_sonar_rooms', code);
+                    await setDoc(roomRef, fresh);
+                }
+            } catch (e) {}
+            applyRoomState(fresh);
+            showCustomModal("초기화 완료", "소나 함대 대원 명단과 격침 기록이 깨끗하게 리셋되었습니다!");
         };
 
         function startFirestoreListener(roomRef) {
             if (unsubscribeRoom) unsubscribeRoom();
             unsubscribeRoom = onSnapshot(roomRef, (snap) => {
                 if (!snap.exists()) return;
-                applyRoomState(snap.data(), false);
-            }, () => { useFallback = true; });
+                applyRoomState(snap.data());
+            }, (err) => {
+                console.warn("Sonar Snapshot error:", err);
+            });
         }
 
-        function applyRoomState(data, broadcastEcho = false) {
+        function applyRoomState(data) {
             if (!data) return;
 
-            if (lastKnownRoomData) {
-                data.blueMembers = mergeMembers(lastKnownRoomData.blueMembers, data.blueMembers);
-                data.redMembers = mergeMembers(lastKnownRoomData.redMembers, data.redMembers);
-            } else {
-                data.blueMembers = mergeMembers([], data.blueMembers);
-                data.redMembers = mergeMembers([], data.redMembers);
-            }
-
+            data.blueMembers = cleanMemberList(data.blueMembers || []);
+            data.redMembers = cleanMemberList(data.redMembers || []);
             lastKnownRoomData = data;
 
-            // Projectile Launch Animation
             if (data.lastLaunch && (!window.lastObservedLaunchId || window.lastObservedLaunchId !== data.lastLaunch.id)) {
                 window.lastObservedLaunchId = data.lastLaunch.id;
                 triggerTorpedoAnimation(data.lastLaunch.team, data.lastLaunch.x, data.lastLaunch.y, data.lastLaunch.fnType);
             }
 
-            // Ship Hit Explosion
             if (data.lastHit && (!window.lastObservedHitId || window.lastObservedHitId !== data.lastHit.id)) {
                 window.lastObservedHitId = data.lastHit.id;
                 triggerShipExplosion(data.lastHit.victimTeam, data.lastHit.x, data.lastHit.y);
             }
 
-            // 기믹 3: 팀원 캔버스 전술 핑(Ping) 수신
             if (data.lastPing && (!window.lastObservedPingId || window.lastObservedPingId !== data.lastPing.id)) {
                 window.lastObservedPingId = data.lastPing.id;
                 if (data.lastPing.team === myTeam) {
@@ -910,19 +916,13 @@
                 const winnerTeam = data.redShips <= 0 ? 'blue' : 'red';
                 triggerGrandVictory(winnerTeam, data);
             }
-
-            if (broadcastEcho && bc) {
-                try {
-                    bc.postMessage({ type: 'SYNC_STATE', payload: data });
-                } catch (e) {}
-            }
         }
 
         async function syncStateUpdate(nextData) {
-            applyRoomState(nextData, true);
+            applyRoomState(nextData);
             if (!useFallback && db) {
                 try {
-                    const roomRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'stealth_sonar_rooms'), currentRoomCode);
+                    const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
                     await updateDoc(roomRef, nextData);
                 } catch (e) {
                     useFallback = true;
@@ -953,7 +953,7 @@
         function updatePipelineUI(data) {
             const team = myTeam;
             const myRawMembers = team === 'blue' ? (data.blueMembers || []) : (data.redMembers || []);
-            const myMembers = mergeMembers([], myRawMembers);
+            const myMembers = cleanMemberList(myRawMembers);
             const currentStage = team === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
             const currentMission = team === 'blue' ? data.blueMission : data.redMission;
             const problemCount = team === 'blue' ? (data.blueProblemCount || 1) : (data.redProblemCount || 1);
@@ -990,7 +990,7 @@
             }
 
             const teamSize = Math.max(1, myMembers.length);
-            const myIndex = myMembers.findIndex(m => m.name === currentUserName);
+            const myIndex = myMembers.findIndex(m => m.id === myPlayerId || m.name === currentUserName);
             const activeMemberIndex = getStageActorIndex(currentStage, teamSize, problemCount);
             const activeMemberObj = myMembers[activeMemberIndex];
             const activeMemberName = activeMemberObj ? activeMemberObj.name : `${activeMemberIndex + 1}번 대원`;
@@ -1179,7 +1179,6 @@
 
             if (currentStage !== 3) return;
 
-            // 기믹 1: 2척째부터는 대칭이동 회피기동 100% 무조건 발동!
             if (mission.evasionType && !window.evasionHandledThisTurn) {
                 window.evasionHandledThisTurn = true;
                 openSymmetryModal(mission);
@@ -1347,7 +1346,6 @@
             resizeRadarCanvas();
             window.addEventListener('resize', resizeRadarCanvas);
 
-            // 기믹 3: 캔버스 터치/클릭으로 팀 전술 핑(Ping) 공유
             canvas.addEventListener('click', handleCanvasPing);
             canvas.addEventListener('touchstart', (e) => {
                 if (e.touches && e.touches[0]) {
@@ -1387,7 +1385,6 @@
                 sfx.tacticalPing();
                 addTacticalPing(mathX, mathY, currentUserName || '대원');
                 
-                // Broadcast Ping to teammates
                 if (lastKnownRoomData) {
                     const pingData = { ...lastKnownRoomData };
                     pingData.lastPing = {
@@ -1482,12 +1479,10 @@
             ctx.lineWidth = 1;
             for (let i = -5; i <= 5; i++) {
                 if (i === 0) continue;
-                // Vertical grid
                 ctx.beginPath();
                 ctx.moveTo(cx + i * scale, cy - maxR);
                 ctx.lineTo(cx + i * scale, cy + maxR);
                 ctx.stroke();
-                // Horizontal grid
                 ctx.beginPath();
                 ctx.moveTo(cx - maxR, cy - i * scale);
                 ctx.lineTo(cx + maxR, cy - i * scale);
@@ -1497,12 +1492,10 @@
             // 3. Thick Main Coordinate Axes: X & Y
             ctx.strokeStyle = '#2dd4bf';
             ctx.lineWidth = 2.5;
-            // X-Axis
             ctx.beginPath();
             ctx.moveTo(cx - maxR, cy);
             ctx.lineTo(cx + maxR, cy);
             ctx.stroke();
-            // Y-Axis
             ctx.beginPath();
             ctx.moveTo(cx, cy - maxR);
             ctx.lineTo(cx, cy + maxR);
@@ -1536,7 +1529,6 @@
             ctx.fillStyle = sweepGrad;
             ctx.fill();
 
-            // Leading bright sweep line
             ctx.strokeStyle = '#5eead4';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -1590,7 +1582,6 @@
                 let curPx = cx + (targetPx - cx) * torp.progress;
                 let curPy = cy + (targetPy - cy) * torp.progress;
 
-                // Function trajectory bend
                 if (torp.fnType === 'inverse' && torp.targetX !== 0) {
                     const arcOffset = Math.sin(torp.progress * Math.PI) * 25;
                     curPy -= arcOffset;
@@ -1638,7 +1629,6 @@
             const isBlue = team === 'blue';
             const color = isBlue ? '#38bdf8' : '#fb7185';
 
-            // Highlight selected quadrant (Step 0)
             if (crosshair.quad !== undefined && crosshair.quad > 0) {
                 ctx.save();
                 ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.12)' : 'rgba(251, 113, 133, 0.12)';
@@ -1648,7 +1638,6 @@
                 ctx.fillRect(cx, cy, signX * scale * 5.2, signY * scale * 5.2);
                 ctx.restore();
             } else if (crosshair.quad === 0) {
-                // Highlight axis region
                 ctx.save();
                 ctx.fillStyle = 'rgba(250, 204, 21, 0.18)';
                 ctx.fillRect(cx - scale * 5.2, cy - 8, scale * 10.4, 16);
@@ -1656,7 +1645,6 @@
                 ctx.restore();
             }
 
-            // 기믹 3: 정비례 직선 및 반비례 쌍곡선 시각화
             if (mission && currentStage >= 2 && mission.targetX !== 0 && mission.targetY !== 0) {
                 ctx.save();
                 ctx.strokeStyle = isBlue ? 'rgba(56, 189, 248, 0.65)' : 'rgba(251, 113, 133, 0.65)';
@@ -1690,7 +1678,6 @@
                 ctx.restore();
             }
 
-            // Draw X Guideline (Step 1)
             if (crosshair.x !== null && crosshair.x !== undefined) {
                 const px = cx + crosshair.x * scale;
                 ctx.strokeStyle = color;
@@ -1703,7 +1690,6 @@
                 ctx.setLineDash([]);
             }
 
-            // Draw Y Guideline & Target Crosshair Reticle (Step 2 & 3)
             if (crosshair.y !== null && crosshair.y !== undefined && crosshair.x !== null) {
                 const px = cx + crosshair.x * scale;
                 const py = cy - crosshair.y * scale;
@@ -1717,7 +1703,6 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // Target Lock Reticle
                 ctx.save();
                 ctx.strokeStyle = '#facc15';
                 ctx.lineWidth = 2.5;
