@@ -226,7 +226,7 @@
                                 제4사분면 (+, -)
                             </button>
                         </div>
-                        <!-- 기믹 2: 어느 사분면에도 속하지 않는 축 위의 점 버튼 -->
+                        <!-- 어느 사분면에도 속하지 않는 축 위의 점 버튼 -->
                         <button onclick="submitQuadrantStep(0)" class="w-full py-3 bg-gradient-to-r from-amber-600/90 to-yellow-600/90 hover:from-amber-500 hover:to-yellow-500 border-2 border-yellow-300 rounded-xl font-sonar text-sm md:text-base text-white transition active:scale-95 shadow-lg">
                             ⭐ 좌표축(x축/y축) 위 (어느 사분면에도 속하지 않음)
                         </button>
@@ -293,7 +293,7 @@
         </div>
     </main>
 
-    <!-- 기믹 1: 대칭이동 회피 기동 대응 긴급 모달 -->
+    <!-- 대칭이동 회피 기동 대응 긴급 모달 -->
     <div id="symmetry-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
         <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl danger-siren">
             <div class="text-5xl mb-2 animate-bounce">🚨</div>
@@ -373,6 +373,7 @@
         </div>
     </div>
 
+    <!-- Web Audio API Sound Synthesizer -->
     <script>
         class SoundFX {
             constructor() {
@@ -436,7 +437,7 @@
             victoryFanfare() {
                 this.init();
                 const notes = [
-                    { f: 587.33, d: 0.18 },
+                    { f: 523.25, d: 0.18 },
                     { f: 739.99, d: 0.18 },
                     { f: 880.00, d: 0.22 },
                     { f: 1174.66, d: 0.5 },
@@ -453,10 +454,10 @@
         const sfx = new SoundFX();
     </script>
 
+    <!-- Main Game Logic and Optimized Firebase Synchronizer -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeFirestore, memoryLocalCache, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyChxrOzoTxFMy_BvkvNZLXAp1oRvN7Fb1g",
@@ -473,21 +474,21 @@
 
         try {
             const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            const auth = getAuth(app);
-            await signInAnonymously(auth);
-
+            db = initializeFirestore(app, {
+                localCache: memoryLocalCache()
+            });
+            useFallback = false;
             const badge = document.getElementById('db-status-badge');
             if (badge) {
                 badge.innerText = "🟢 클라우드 DB 정상 연결!";
                 badge.className = "text-emerald-400 font-bold";
             }
         } catch (e) {
-            useFallback = false;
+            useFallback = true;
             const badge = document.getElementById('db-status-badge');
             if (badge) {
-                badge.innerText = "🟢 클라우드 DB 연결 (직접 모드)";
-                badge.className = "text-emerald-400 font-bold";
+                badge.innerText = "🔴 로컬 모드 작동 (" + e.message + ")";
+                badge.className = "text-rose-400 font-bold";
             }
         }
 
@@ -498,7 +499,8 @@
         const myJoinedAt = Date.now();
         let unsubscribeRoom = null;
         let lastKnownRoomData = null;
-        let heartbeatInterval = null;
+        let bc = null;
+        let lastPingSentTime = 0;
 
         let missionStartTime = Date.now();
         let prevWasMyTurn = false;
@@ -706,10 +708,9 @@
                 const id = item.id || item.name;
                 const name = item.name || item.id || '대원';
                 const joinedAt = item.joinedAt || Date.now();
-                const lastSeen = item.lastSeen || Date.now();
                 
                 if (!map.has(id)) {
-                    map.set(id, { id, name, joinedAt, lastSeen });
+                    map.set(id, { id, name, joinedAt });
                 }
             });
             return Array.from(map.values()).sort((a, b) => 
@@ -773,7 +774,22 @@
             currentRoomCode = code;
             myTeam = team;
 
-            const myMemberObj = { id: myPlayerId, name: currentUserName, lastSeen: Date.now(), joinedAt: myJoinedAt };
+            const myMemberObj = { id: myPlayerId, name: currentUserName, joinedAt: myJoinedAt };
+
+            // Zero-latency BroadcastChannel for peer communication
+            try {
+                if (window.BroadcastChannel) {
+                    if (bc) bc.close();
+                    bc = new BroadcastChannel(`stealth_sonar_${currentRoomCode}`);
+                    bc.onmessage = (event) => {
+                        const msg = event.data;
+                        if (!msg) return;
+                        if (msg.type === 'LOCAL_PING' && msg.team === myTeam) {
+                            addTacticalPing(msg.coordX, msg.coordY, msg.sender);
+                        }
+                    };
+                }
+            } catch (e) {}
 
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('battle-screen').classList.remove('hidden');
@@ -785,8 +801,9 @@
             else initialData.redMembers = [myMemberObj];
             applyRoomState(initialData);
 
+            // One-time registration to Firestore root collection
             try {
-                if (db) {
+                if (!useFallback && db) {
                     const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
                     startFirestoreListener(roomRef);
 
@@ -805,40 +822,11 @@
                 console.warn("Sonar join error:", err);
             }
 
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-            heartbeatInterval = setInterval(sendHeartbeat, 3500);
             window.addEventListener('beforeunload', leaveRoomCleanup);
         };
 
-        async function sendHeartbeat() {
-            if (!currentRoomCode || !myTeam || !db) return;
-            try {
-                const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
-                const snap = await getDoc(roomRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    const listKey = myTeam === 'blue' ? 'blueMembers' : 'redMembers';
-                    let list = data[listKey] || [];
-                    let found = false;
-                    list = list.map(m => {
-                        if ((m.id || m.name) === myPlayerId) {
-                            found = true;
-                            return { ...m, lastSeen: Date.now() };
-                        }
-                        return m;
-                    });
-                    if (!found) {
-                        list.push({ id: myPlayerId, name: currentUserName, lastSeen: Date.now(), joinedAt: myJoinedAt });
-                    }
-                    data[listKey] = cleanMemberList(list);
-                    data.updatedAt = Date.now();
-                    await updateDoc(roomRef, { [listKey]: data[listKey], updatedAt: data.updatedAt });
-                }
-            } catch (e) {}
-        }
-
         async function leaveRoomCleanup() {
-            if (!currentRoomCode || !myTeam || !db) return;
+            if (!currentRoomCode || !myTeam || useFallback || !db) return;
             try {
                 const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
                 const snap = await getDoc(roomRef);
@@ -854,12 +842,12 @@
         window.resetCurrentRoomData = async function() {
             const code = currentRoomCode || document.getElementById('room-code').value.trim() || 'sonar101';
             const fresh = createInitialRoomData();
-            const myMemberObj = { id: myPlayerId, name: currentUserName || '소나관', lastSeen: Date.now(), joinedAt: myJoinedAt };
+            const myMemberObj = { id: myPlayerId, name: currentUserName || '소나관', joinedAt: myJoinedAt };
             if (myTeam === 'blue') fresh.blueMembers = [myMemberObj];
             else if (myTeam === 'red') fresh.redMembers = [myMemberObj];
 
             try {
-                if (db) {
+                if (!useFallback && db) {
                     const roomRef = doc(db, 'stealth_sonar_rooms', code);
                     await setDoc(roomRef, fresh);
                 }
@@ -875,6 +863,7 @@
                 applyRoomState(snap.data());
             }, (err) => {
                 console.warn("Sonar Snapshot error:", err);
+                useFallback = true;
             });
         }
 
@@ -1385,7 +1374,17 @@
                 sfx.tacticalPing();
                 addTacticalPing(mathX, mathY, currentUserName || '대원');
                 
-                if (lastKnownRoomData) {
+                // Zero-cost broadcast to other local tabs
+                if (bc) {
+                    try {
+                        bc.postMessage({ type: 'LOCAL_PING', team: myTeam, coordX: mathX, coordY: mathY, sender: currentUserName || '대원' });
+                    } catch (e) {}
+                }
+
+                // Throttled Firestore ping (max once every 2.5s)
+                const now = Date.now();
+                if (now - lastPingSentTime > 2500 && lastKnownRoomData) {
+                    lastPingSentTime = now;
                     const pingData = { ...lastKnownRoomData };
                     pingData.lastPing = {
                         team: myTeam,
@@ -1479,10 +1478,12 @@
             ctx.lineWidth = 1;
             for (let i = -5; i <= 5; i++) {
                 if (i === 0) continue;
+                // Vertical grid
                 ctx.beginPath();
                 ctx.moveTo(cx + i * scale, cy - maxR);
                 ctx.lineTo(cx + i * scale, cy + maxR);
                 ctx.stroke();
+                // Horizontal grid
                 ctx.beginPath();
                 ctx.moveTo(cx - maxR, cy - i * scale);
                 ctx.lineTo(cx + maxR, cy - i * scale);
@@ -1492,10 +1493,12 @@
             // 3. Thick Main Coordinate Axes: X & Y
             ctx.strokeStyle = '#2dd4bf';
             ctx.lineWidth = 2.5;
+            // X-Axis
             ctx.beginPath();
             ctx.moveTo(cx - maxR, cy);
             ctx.lineTo(cx + maxR, cy);
             ctx.stroke();
+            // Y-Axis
             ctx.beginPath();
             ctx.moveTo(cx, cy - maxR);
             ctx.lineTo(cx, cy + maxR);
@@ -1529,6 +1532,7 @@
             ctx.fillStyle = sweepGrad;
             ctx.fill();
 
+            // Leading bright sweep line
             ctx.strokeStyle = '#5eead4';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -1620,7 +1624,6 @@
                 if (exp.alpha <= 0) explosions.splice(i, 1);
             }
 
-            ctx.restore();
             requestAnimationFrame(renderRadarLoop);
         }
 
