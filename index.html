@@ -9,10 +9,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Jua', 'Inter', sans-serif; }
+        body { 
+            font-family: 'Jua', 'Inter', sans-serif;
+            color: #f8fafc;
+            background-color: #010a0e;
+            margin: 0;
+            padding: 0;
+        }
+        .hidden {
+            display: none !important;
+        }
         .font-sonar { font-family: 'Black Han Sans', sans-serif; }
         .deep-sea-bg {
             background: radial-gradient(circle at 50% 20%, #032a30 0%, #02171c 55%, #010a0e 100%);
+            min-height: 100vh;
         }
         .sonar-pulse-box {
             animation: sonarPulse 2.4s infinite ease-in-out;
@@ -87,19 +97,27 @@
 
             <!-- Team Select Buttons -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                <button onclick="joinTeam('blue')" class="group relative py-5 rounded-2xl font-sonar text-xl bg-gradient-to-r from-cyan-700 to-blue-600 hover:from-cyan-600 hover:to-blue-500 transition-all duration-200 shadow-xl border-2 border-cyan-300 flex items-center justify-center gap-3 transform hover:-translate-y-1">
+                <button onclick="joinTeam('blue')" class="group relative py-5 rounded-2xl font-sonar text-xl bg-gradient-to-r from-cyan-700 to-blue-600 hover:from-cyan-600 hover:to-blue-500 transition-all duration-200 shadow-xl border-2 border-cyan-300 flex items-center justify-center gap-3 transform hover:-translate-y-1 active:scale-95">
                     <span class="text-3xl">🔵</span>
                     <span>청해 함대 (블루 소나) 참전</span>
                 </button>
-                <button onclick="joinTeam('red')" class="group relative py-5 rounded-2xl font-sonar text-xl bg-gradient-to-r from-rose-700 to-red-600 hover:from-rose-600 hover:to-red-500 transition-all duration-200 shadow-xl border-2 border-rose-400 flex items-center justify-center gap-3 transform hover:-translate-y-1">
+                <button onclick="joinTeam('red')" class="group relative py-5 rounded-2xl font-sonar text-xl bg-gradient-to-r from-rose-700 to-red-600 hover:from-rose-600 hover:to-red-500 transition-all duration-200 shadow-xl border-2 border-rose-400 flex items-center justify-center gap-3 transform hover:-translate-y-1 active:scale-95">
                     <span class="text-3xl">🔴</span>
                     <span>홍해 함대 (레드 헌터) 참전</span>
                 </button>
             </div>
 
+            <!-- Teacher Spectator Mode Button -->
+            <div class="mb-5">
+                <button onclick="joinSpectator()" class="w-full py-4 rounded-2xl font-sonar text-lg md:text-xl bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 hover:from-purple-900 hover:to-indigo-900 transition-all duration-200 shadow-2xl border-2 border-purple-400 text-purple-200 flex items-center justify-center gap-3 transform hover:-translate-y-0.5 active:scale-95">
+                    <span class="text-2xl animate-pulse">📺</span>
+                    <span class="tracking-wide font-bold">교사 전용 / 대형 스크린 중계석 입장 (학생 명단 미포함 관전)</span>
+                </button>
+            </div>
+
             <!-- Lobby Ghost Reset Button -->
             <div class="flex justify-center mb-4">
-                <button onclick="resetCurrentRoomData()" class="px-4 py-2 bg-rose-950/90 hover:bg-rose-900 border border-rose-500/70 rounded-xl text-xs text-rose-300 font-bold transition flex items-center gap-2 shadow">
+                <button onclick="resetCurrentRoomData()" class="px-4 py-2 bg-rose-950/90 hover:bg-rose-900 border border-rose-500/70 rounded-xl text-xs text-rose-300 font-bold transition flex items-center gap-2 shadow active:scale-95">
                     <span>🧹</span><span>로비 대원 명단 초기화 (유령 정리)</span>
                 </button>
             </div>
@@ -208,6 +226,35 @@
                 <div class="w-full max-w-xl flex flex-col items-center gap-3">
                     <div id="step-instruction" class="text-sm md:text-base font-bold text-teal-200 min-h-[44px] flex items-center justify-center px-2">
                         단계 안내 로딩 중...
+                    </div>
+
+                    <!-- Spectator Dual-Team Live Broadcast Panel -->
+                    <div id="spectator-broadcast-panel" class="hidden w-full max-w-2xl bg-gradient-to-r from-slate-900/90 via-purple-950/80 to-slate-900/90 border-2 border-purple-400/80 rounded-2xl p-4 shadow-2xl">
+                        <div class="flex items-center justify-between border-b border-purple-500/40 pb-2 mb-3">
+                            <span class="text-xs font-mono text-purple-300 font-bold flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                                <span>ON-AIR // 대형 스크린 실시간 공식 중계석</span>
+                            </span>
+                            <span class="text-[11px] font-sonar text-yellow-300">교사 화면: 학생 턴 미개입</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                            <div class="p-2.5 rounded-xl bg-cyan-950/60 border border-cyan-500/50">
+                                <div class="text-xs text-cyan-300 font-bold font-sonar mb-1 flex items-center justify-between">
+                                    <span>🔵 청해 함대 (블루 소나)</span>
+                                    <span id="spec-blue-target" class="text-[10px] text-yellow-300 font-mono">타겟 #1</span>
+                                </div>
+                                <div id="spec-blue-stage" class="text-xs font-bold text-white mb-1">1단계: 사분면 색출</div>
+                                <div id="spec-blue-actor" class="text-[11px] text-cyan-200 font-mono truncate">주자: 대기 중</div>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/50">
+                                <div class="text-xs text-rose-300 font-bold font-sonar mb-1 flex items-center justify-between">
+                                    <span>🔴 홍해 함대 (레드 헌터)</span>
+                                    <span id="spec-red-target" class="text-[10px] text-yellow-300 font-mono">타겟 #1</span>
+                                </div>
+                                <div id="spec-red-stage" class="text-xs font-bold text-white mb-1">1단계: 사분면 색출</div>
+                                <div id="spec-red-actor" class="text-[11px] text-rose-200 font-mono truncate">주자: 대기 중</div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Input Mode 1: Quadrant Buttons + Axis Point Button (Step 0) -->
@@ -825,8 +872,54 @@
             window.addEventListener('beforeunload', leaveRoomCleanup);
         };
 
+        // Teacher Spectator / Broadcaster Entry Function
+        window.joinSpectator = async function() {
+            const codeInput = document.getElementById('room-code');
+            const code = (codeInput ? codeInput.value.trim() : '') || 'sonar101';
+
+            currentUserName = '교사 중계석';
+            currentRoomCode = code;
+            myTeam = 'spectator';
+
+            try {
+                if (window.BroadcastChannel) {
+                    if (bc) bc.close();
+                    bc = new BroadcastChannel(`stealth_sonar_${currentRoomCode}`);
+                    bc.onmessage = (event) => {
+                        const msg = event.data;
+                        if (!msg) return;
+                        if (msg.type === 'LOCAL_PING') {
+                            addTacticalPing(msg.coordX, msg.coordY, msg.sender);
+                        } else if (msg.type === 'SYNC_STATE' && msg.payload) {
+                            applyRoomState(msg.payload);
+                        }
+                    };
+                }
+            } catch (e) {}
+
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('battle-screen').classList.remove('hidden');
+            initRadarCanvas();
+            sfx.victoryFanfare();
+
+            try {
+                if (!useFallback && db) {
+                    const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
+                    startFirestoreListener(roomRef);
+                    const snap = await getDoc(roomRef);
+                    if (snap.exists()) {
+                        applyRoomState(snap.data());
+                    } else {
+                        applyRoomState(createInitialRoomData());
+                    }
+                }
+            } catch (err) {
+                applyRoomState(createInitialRoomData());
+            }
+        };
+
         async function leaveRoomCleanup() {
-            if (!currentRoomCode || !myTeam || useFallback || !db) return;
+            if (!currentRoomCode || !myTeam || myTeam === 'spectator' || useFallback || !db) return;
             try {
                 const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
                 const snap = await getDoc(roomRef);
@@ -941,6 +1034,77 @@
 
         function updatePipelineUI(data) {
             const team = myTeam;
+
+            // Handle Spectator / Broadcaster View
+            if (team === 'spectator') {
+                const specPanel = document.getElementById('spectator-broadcast-panel');
+                const quadControls = document.getElementById('quadrant-buttons-control');
+                const numControls = document.getElementById('number-input-control');
+                const torpedoControls = document.getElementById('torpedo-launch-control');
+                const waitingNotice = document.getElementById('waiting-notice');
+
+                if (specPanel) specPanel.classList.remove('hidden');
+                if (quadControls) quadControls.classList.add('hidden');
+                if (numControls) numControls.classList.add('hidden');
+                if (torpedoControls) torpedoControls.classList.add('hidden');
+                if (waitingNotice) waitingNotice.classList.add('hidden');
+
+                const teamBadge = document.getElementById('my-team-badge');
+                if (teamBadge) {
+                    teamBadge.innerText = `📺 ON-AIR // 교사 공식 중계석`;
+                    teamBadge.className = 'text-xs px-3.5 py-1.5 bg-purple-500/30 text-purple-300 border border-purple-400 rounded-full font-bold font-sonar animate-pulse';
+                }
+                const roleBadge = document.getElementById('my-role-badge');
+                if (roleBadge) {
+                    roleBadge.innerText = `관전 모드 (학생 조준 미개입)`;
+                    roleBadge.className = 'text-xs px-3.5 py-1.5 bg-slate-800 text-slate-300 border border-slate-600 rounded-full font-bold font-mono';
+                }
+
+                const stageNames = [
+                    "① 사분면 색출",
+                    "② X축 조준선",
+                    "③ Y축 유도선",
+                    "④ 어뢰 투하 🚀"
+                ];
+
+                const bMembers = cleanMemberList(data.blueMembers || []);
+                const rMembers = cleanMemberList(data.redMembers || []);
+                const bStage = data.blueStage || 0;
+                const rStage = data.redStage || 0;
+                const bCount = data.blueProblemCount || 1;
+                const rCount = data.redProblemCount || 1;
+                const bShips = data.blueShips !== undefined ? data.blueShips : 5;
+                const rShips = data.redShips !== undefined ? data.redShips : 5;
+
+                const bActorIdx = getStageActorIndex(bStage, Math.max(1, bMembers.length), bCount);
+                const rActorIdx = getStageActorIndex(rStage, Math.max(1, rMembers.length), rCount);
+
+                const specBTarget = document.getElementById('spec-blue-target');
+                const specBStage = document.getElementById('spec-blue-stage');
+                const specBActor = document.getElementById('spec-blue-actor');
+                if (specBTarget) specBTarget.innerText = `타겟 #${bCount} (잔여: ${bShips}/5척)`;
+                if (specBStage) specBStage.innerText = stageNames[bStage] || '대기 중';
+                if (specBActor) specBActor.innerText = `현재 주자: ${bMembers[bActorIdx] ? bMembers[bActorIdx].name : '대기 중'}`;
+
+                const specRTarget = document.getElementById('spec-red-target');
+                const specRStage = document.getElementById('spec-red-stage');
+                const specRActor = document.getElementById('spec-red-actor');
+                if (specRTarget) specRTarget.innerText = `타겟 #${rCount} (잔여: ${rShips}/5척)`;
+                if (specRStage) specRStage.innerText = stageNames[rStage] || '대기 중';
+                if (specRActor) specRActor.innerText = `현재 주자: ${rMembers[rActorIdx] ? rMembers[rActorIdx].name : '대기 중'}`;
+
+                const instEl = document.getElementById('step-instruction');
+                if (instEl) {
+                    instEl.innerHTML = `<span class="text-yellow-300">📡 [실시간 공식 중계 중] 양 함대의 4분면 스텔스 소나 격침전을 관전하고 있습니다.</span>`;
+                }
+
+                const activeMission = bShips <= rShips ? data.blueMission : data.redMission;
+                if (activeMission && document.getElementById('mission-clue-display')) {
+                    document.getElementById('mission-clue-display').innerText = `[선두 소나 신호] ${activeMission.fullClue}`;
+                }
+                return;
+            }
+
             const myRawMembers = team === 'blue' ? (data.blueMembers || []) : (data.redMembers || []);
             const myMembers = cleanMemberList(myRawMembers);
             const currentStage = team === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
