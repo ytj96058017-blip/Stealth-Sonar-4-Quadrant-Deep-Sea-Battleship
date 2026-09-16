@@ -1464,6 +1464,7 @@
         window.showCustomModal = function(title, msg) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-body').innerText = msg;
+            document.getElementById('custom-modal').classList.add('hidden');
             document.getElementById('custom-modal').classList.remove('hidden');
         };
 
