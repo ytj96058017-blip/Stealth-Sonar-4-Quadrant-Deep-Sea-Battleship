@@ -1294,7 +1294,14 @@
 
             if (currentStage !== 3) return;
 
+            if (mission.evasionType && !window.evasionHandledThisTurn) {
+                window.evasionHandledThisTurn = true;
+                openSymmetryModal(mission);
+                return;
+            }
+
             isActionProcessing = true;
+            window.evasionHandledThisTurn = false;
             const torpedoLaunchBtn = document.getElementById('torpedo-launch-btn');
             if (torpedoLaunchBtn) {
                 torpedoLaunchBtn.disabled = true;
@@ -1350,6 +1357,65 @@
 
             nextData.updatedAt = Date.now();
             await syncStateUpdate(nextData);
+        };
+
+        let currentEvasionExpectedX = 0;
+        let currentEvasionExpectedY = 0;
+
+        function openSymmetryModal(mission) {
+            sfx.error();
+            const instEl = document.getElementById('symmetry-instruction');
+            const targetEl = document.getElementById('symmetry-target-display');
+            const symModal = document.getElementById('symmetry-modal');
+
+            targetEl.innerText = `기존 조준 좌표: (${mission.targetX}, ${mission.targetY})`;
+
+            let evasionDesc = "";
+            if (mission.evasionType === 'x_axis') {
+                evasionDesc = "적함이 [x축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (x, -y) 공식으로 수정 좌표를 입력하세요!";
+                currentEvasionExpectedX = mission.targetX;
+                currentEvasionExpectedY = -mission.targetY;
+            } else if (mission.evasionType === 'y_axis') {
+                evasionDesc = "적함이 [y축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, y) 공식으로 수정 좌표를 입력하세요!";
+                currentEvasionExpectedX = -mission.targetX;
+                currentEvasionExpectedY = mission.targetY;
+            } else {
+                evasionDesc = "적함이 [원점(O)]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, -y) 공식으로 수정 좌표를 입력하세요!";
+                currentEvasionExpectedX = -mission.targetX;
+                currentEvasionExpectedY = -mission.targetY;
+            }
+
+            instEl.innerText = evasionDesc;
+            document.getElementById('sym-x-input').value = '';
+            document.getElementById('sym-y-input').value = '';
+            symModal.classList.remove('hidden');
+        }
+
+        window.submitSymmetryCorrection = function() {
+            const inputX = parseFloat(document.getElementById('sym-x-input').value.trim());
+            const inputY = parseFloat(document.getElementById('sym-y-input').value.trim());
+
+            if (isNaN(inputX) || isNaN(inputY)) {
+                sfx.error();
+                return;
+            }
+
+            if (inputX === currentEvasionExpectedX && inputY === currentEvasionExpectedY) {
+                sfx.success();
+                document.getElementById('symmetry-modal').classList.add('hidden');
+                showStepFeedback(`🎯 [대칭 회피 격파!] 수정 좌표 (${inputX}, ${inputY}) 추적 완료! 어뢰를 발사합니다!`, false);
+                
+                const mission = myTeam === 'blue' ? lastKnownRoomData.blueMission : lastKnownRoomData.redMission;
+                mission.targetX = currentEvasionExpectedX;
+                mission.targetY = currentEvasionExpectedY;
+                mission.evasionType = null;
+                
+                window.launchTorpedoStep();
+            } else {
+                sfx.error();
+                showStepFeedback("❌ 대칭이동 부호 계산 오류! x축 대칭: (x, -y) / y축 대칭: (-x, y) / 원점: (-x, -y)", true);
+                triggerLockoutPenalty();
+            }
         };
 
         function showStepFeedback(text, isError) {
