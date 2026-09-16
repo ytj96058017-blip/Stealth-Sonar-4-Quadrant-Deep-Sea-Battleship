@@ -63,7 +63,6 @@
         </p>
     </header>
 
-    <!-- Main Workspace Container -->
     <main class="max-w-5xl w-full mx-auto flex-1 flex flex-col justify-center">
 
         <!-- 1. Lobby Screen -->
@@ -273,7 +272,6 @@
                                 제4사분면 (+, -)
                             </button>
                         </div>
-                        <!-- 어느 사분면에도 속하지 않는 축 위의 점 버튼 -->
                         <button onclick="submitQuadrantStep(0)" class="w-full py-3 bg-gradient-to-r from-amber-600/90 to-yellow-600/90 hover:from-amber-500 hover:to-yellow-500 border-2 border-yellow-300 rounded-xl font-sonar text-sm md:text-base text-white transition active:scale-95 shadow-lg">
                             ⭐ 좌표축(x축/y축) 위 (어느 사분면에도 속하지 않음)
                         </button>
@@ -501,7 +499,6 @@
         const sfx = new SoundFX();
     </script>
 
-    <!-- Main Game Logic and Optimized Firebase Synchronizer -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { initializeFirestore, memoryLocalCache, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -555,9 +552,9 @@
         let isLockedOut = false;
         let lockoutTimerInterval = null;
         const recentCluesSet = new Set();
-        let stormWipesRemaining = 5;
 
-        // ★ [연타 방지 가드 플래그] 어뢰 발사 중복 클릭 방지
+        // ★ [핵심 해결책] 어뢰 비행 전용 락: 어뢰가 완전히 명중할 때까지 절대 풀리지 않는 전역 상태
+        let isTorpedoInFlight = false;
         let isActionProcessing = false;
 
         function generateSonarMission(targetShipIndex = 1) {
@@ -622,6 +619,12 @@
                     }
                 }
 
+                let evasionType = null;
+                if (!isAxisProblem && targetShipIndex >= 2) {
+                    const evTypes = ['x_axis', 'y_axis', 'origin'];
+                    evasionType = evTypes[(targetShipIndex - 2) % evTypes.length];
+                }
+
                 const fullClue = `【음파 탐지】 ${quadClue}`;
 
                 if (!recentCluesSet.has(fullClue) || attempts > 120) {
@@ -641,7 +644,8 @@
                         yClue: yClue,
                         fnType: fnType,
                         fnExpr: fnExpr,
-                        fullClue: fullClue
+                        fullClue: fullClue,
+                        evasionType: evasionType
                     };
                     break;
                 }
@@ -658,7 +662,8 @@
                     yClue: "반비례 관계식 [ y = -6/x ] 위의 점",
                     fnType: "inverse",
                     fnExpr: "y = -6/x",
-                    fullClue: "【음파 탐지】 제2사분면에 확실히 매복 중!"
+                    fullClue: "【음파 탐지】 제2사분면에 확실히 매복 중!",
+                    evasionType: "x_axis"
                 };
             }
             return mission;
@@ -700,10 +705,9 @@
                 const id = item.id || item.name;
                 const name = item.name || item.id || '대원';
                 const joinedAt = item.joinedAt || Date.now();
-                const lastSeen = item.lastSeen || Date.now();
                 
                 if (!map.has(id)) {
-                    map.set(id, { id, name, joinedAt, lastSeen });
+                    map.set(id, { id, name, joinedAt });
                 }
             });
             return Array.from(map.values()).sort((a, b) => 
@@ -765,8 +769,9 @@
             currentRoomCode = code;
             myTeam = team;
             isActionProcessing = false;
+            isTorpedoInFlight = false;
 
-            const myMemberObj = { id: myPlayerId, name: currentUserName, lastSeen: Date.now(), joinedAt: myJoinedAt };
+            const myMemberObj = { id: myPlayerId, name: currentUserName, joinedAt: myJoinedAt };
 
             try {
                 if (window.BroadcastChannel) {
@@ -776,7 +781,7 @@
                         const msg = event.data;
                         if (!msg) return;
                         if (msg.type === 'LOCAL_PING' && msg.team === myTeam) {
-                            addTacticalPingCoords(msg.coordX, msg.coordY, msg.sender);
+                            addTacticalPing(msg.coordX, msg.coordY, msg.sender);
                         } else if (msg.type === 'SYNC_STATE' && msg.payload) {
                             applyRoomState(msg.payload);
                         }
@@ -817,7 +822,6 @@
             window.addEventListener('beforeunload', leaveRoomCleanup);
         };
 
-        // Teacher Spectator / Broadcaster Entry Function
         window.joinSpectator = async function() {
             const codeInput = document.getElementById('room-code');
             const code = (codeInput ? codeInput.value.trim() : '') || 'sonar101';
@@ -826,6 +830,7 @@
             currentRoomCode = code;
             myTeam = 'spectator';
             isActionProcessing = false;
+            isTorpedoInFlight = false;
 
             try {
                 if (window.BroadcastChannel) {
@@ -835,7 +840,7 @@
                         const msg = event.data;
                         if (!msg) return;
                         if (msg.type === 'LOCAL_PING') {
-                            addTacticalPingCoords(msg.coordX, msg.coordY, msg.sender);
+                            addTacticalPing(msg.coordX, msg.coordY, msg.sender);
                         } else if (msg.type === 'SYNC_STATE' && msg.payload) {
                             applyRoomState(msg.payload);
                         }
@@ -881,7 +886,7 @@
         window.resetCurrentRoomData = async function() {
             const code = currentRoomCode || document.getElementById('room-code').value.trim() || 'sonar101';
             const fresh = createInitialRoomData();
-            const myMemberObj = { id: myPlayerId, name: currentUserName || '소나관', lastSeen: Date.now(), joinedAt: myJoinedAt };
+            const myMemberObj = { id: myPlayerId, name: currentUserName || '소나관', joinedAt: myJoinedAt };
             if (myTeam === 'blue') fresh.blueMembers = [myMemberObj];
             else if (myTeam === 'red') fresh.redMembers = [myMemberObj];
 
@@ -891,6 +896,8 @@
                     await setDoc(roomRef, fresh);
                 }
             } catch (e) {}
+            isTorpedoInFlight = false;
+            isActionProcessing = false;
             applyRoomState(fresh);
             showCustomModal("초기화 완료", "소나 함대 대원 명단과 격침 기록이 깨끗하게 리셋되었습니다!");
         };
@@ -924,8 +931,8 @@
 
             if (data.lastPing && (!window.lastObservedPingId || window.lastObservedPingId !== data.lastPing.id)) {
                 window.lastObservedPingId = data.lastPing.id;
-                if (myTeam === 'spectator' || data.lastPing.team === myTeam) {
-                    addTacticalPingCoords(data.lastPing.coordX, data.lastPing.coordY, data.lastPing.sender);
+                if (data.lastPing.team === myTeam) {
+                    addTacticalPing(data.lastPing.coordX, data.lastPing.coordY, data.lastPing.sender);
                 }
             }
 
@@ -1136,16 +1143,19 @@
 
             if (isMyTurn) {
                 waitingNotice.classList.add('hidden');
-                isActionProcessing = false;
-                if (torpedoLaunchBtn) {
-                    torpedoLaunchBtn.disabled = false;
-                    torpedoLaunchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                // ★ 4단계 어뢰 비행 중이 아닐 때만 락 해제
+                if (currentStage !== 3 || !isTorpedoInFlight) {
+                    isActionProcessing = false;
                 }
+
                 if (currentStage === 0) {
+                    isTorpedoInFlight = false;
                     numControls.classList.add('hidden');
                     torpedoControls.classList.add('hidden');
                     quadControls.classList.remove('hidden');
                 } else if (currentStage === 1 || currentStage === 2) {
+                    isTorpedoInFlight = false;
                     quadControls.classList.add('hidden');
                     torpedoControls.classList.add('hidden');
                     numControls.classList.remove('hidden');
@@ -1157,6 +1167,19 @@
                     quadControls.classList.add('hidden');
                     numControls.classList.add('hidden');
                     torpedoControls.classList.remove('hidden');
+                    
+                    // ★ 어뢰가 비행 중이면 버튼을 비활성화 유지, 비행 전이면 활성화
+                    if (torpedoLaunchBtn) {
+                        if (isTorpedoInFlight) {
+                            torpedoLaunchBtn.disabled = true;
+                            torpedoLaunchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                            torpedoLaunchBtn.innerHTML = `<span>🚀</span><span>어뢰 돌진 중... (조준 잠금)</span>`;
+                        } else {
+                            torpedoLaunchBtn.disabled = false;
+                            torpedoLaunchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            torpedoLaunchBtn.innerHTML = `<span>🚀</span><span>심해 중어뢰 발사 (FIRE!)</span>`;
+                        }
+                    }
                 }
             } else {
                 quadControls.classList.add('hidden');
@@ -1285,9 +1308,10 @@
             }
         };
 
+        // ★ [단 한 발만 격침 보장] 완전 무결한 어뢰 발사 파이프라인
         window.launchTorpedoStep = async function() {
-            // ★ [연타 방지 가드] 이미 발사 중이면 추가 클릭 원천 차단
-            if (isActionProcessing) return;
+            // 어뢰가 비행 중이거나 처리 중이면 0.001초의 연타도 100% 무시
+            if (isTorpedoInFlight || isActionProcessing) return;
             if (!lastKnownRoomData) return;
             const data = lastKnownRoomData;
             const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
@@ -1301,13 +1325,16 @@
                 return;
             }
 
-            // 즉시 락 설정 및 버튼 비활성화
+            // 즉시 비행 락 & 버튼 완전 비활성화
+            isTorpedoInFlight = true;
             isActionProcessing = true;
             window.evasionHandledThisTurn = false;
+
             const torpedoLaunchBtn = document.getElementById('torpedo-launch-btn');
             if (torpedoLaunchBtn) {
                 torpedoLaunchBtn.disabled = true;
                 torpedoLaunchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                torpedoLaunchBtn.innerHTML = `<span>🚀</span><span>어뢰 돌진 중... (조준 잠금)</span>`;
             }
 
             sfx.torpedoLaunch();
@@ -1323,10 +1350,15 @@
                 fnType: mission.fnType || 'direct', 
                 id: Date.now() 
             };
+            nextData.updatedAt = Date.now();
+            await syncStateUpdate(nextData);
 
+            // 1.4초 후 어뢰 착탄 및 정확히 1척 격침 처리
             setTimeout(async () => {
                 const latest = lastKnownRoomData || nextData;
                 const hitData = { ...latest };
+                
+                // 잔여 함선 정확히 1척만 감소
                 if (victimTeam === 'red') {
                     hitData.redShips = Math.max(0, (hitData.redShips !== undefined ? hitData.redShips : 5) - 1);
                 } else {
@@ -1354,13 +1386,11 @@
                 showStepFeedback("💥 [DIRECT HIT!] 적 전함 격침 성공! 다음 타겟으로 소나를 회전합니다! (역할 자동 순환)", false);
                 hitData.updatedAt = Date.now();
                 
-                // 작업 완료 후 락 해제
+                // 모든 격침 및 갱신이 완료된 시점에만 비행 락 해제
+                isTorpedoInFlight = false;
                 isActionProcessing = false;
                 await syncStateUpdate(hitData);
             }, 1400);
-
-            nextData.updatedAt = Date.now();
-            await syncStateUpdate(nextData);
         };
 
         let currentEvasionExpectedX = 0;
@@ -1396,6 +1426,7 @@
         }
 
         window.submitSymmetryCorrection = function() {
+            if (isTorpedoInFlight) return;
             const inputX = parseFloat(document.getElementById('sym-x-input').value.trim());
             const inputY = parseFloat(document.getElementById('sym-y-input').value.trim());
 
