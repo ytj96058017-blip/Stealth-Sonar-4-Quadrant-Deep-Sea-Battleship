@@ -292,7 +292,7 @@
 
                     <!-- Input Mode 3: Torpedo Launch Fire Button (Step 3) -->
                     <div id="torpedo-launch-control" class="hidden flex flex-col items-center gap-2 w-full max-w-md">
-                        <button onclick="launchTorpedoStep()" class="w-full py-4 bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 hover:from-rose-500 hover:to-red-400 text-white font-sonar text-2xl rounded-2xl shadow-xl border-2 border-amber-300 active:scale-95 transition animate-pulse flex items-center justify-center gap-2">
+                        <button id="torpedo-launch-btn" onclick="launchTorpedoStep()" class="w-full py-4 bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 hover:from-rose-500 hover:to-red-400 text-white font-sonar text-2xl rounded-2xl shadow-xl border-2 border-amber-300 active:scale-95 transition animate-pulse flex items-center justify-center gap-2">
                             <span>🚀</span><span>심해 중어뢰 발사 (FIRE!)</span>
                         </button>
                         <span class="text-xs text-amber-200 font-semibold">최종 조준점 교차 확인 완료! 어뢰를 투하하세요!</span>
@@ -414,7 +414,7 @@
                 </div>
             </div>
 
-            <button onclick="location.reload()" class="w-full py-4 bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-500 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-sonar text-lg rounded-2xl shadow-xl transform active:scale-95 transition">
+            <button onclick="location.reload()" class="w-full py-4 bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-500 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-sonar text-lg rounded-xl transition shadow-xl transform active:scale-95 transition">
                 ⚓ 새로운 해역 배틀 재도전
             </button>
         </div>
@@ -555,6 +555,10 @@
         let isLockedOut = false;
         let lockoutTimerInterval = null;
         const recentCluesSet = new Set();
+        let stormWipesRemaining = 5;
+
+        // ★ [연타 방지 가드 플래그] 어뢰 발사 중복 클릭 방지
+        let isActionProcessing = false;
 
         function generateSonarMission(targetShipIndex = 1) {
             let mission = null;
@@ -567,7 +571,7 @@
                 let x = 0, y = 0;
 
                 if (isAxisProblem) {
-                    quad = 0; // 축 위의 점
+                    quad = 0;
                     if (Math.random() < 0.5) {
                         x = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
                         y = 0;
@@ -576,89 +580,39 @@
                         y = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
                     }
                 } else {
-                    if (targetShipIndex === 1) {
-                        quad = Math.random() < 0.5 ? 1 : 2;
-                    } else if (targetShipIndex === 2) {
-                        quad = Math.random() < 0.5 ? 3 : 4;
-                    } else if (targetShipIndex === 4) {
-                        quad = Math.random() < 0.5 ? 2 : 4;
-                    } else {
-                        quad = Math.floor(Math.random() * 4) + 1;
-                    }
+                    if (targetShipIndex === 1) quad = Math.random() < 0.5 ? 1 : 2;
+                    else if (targetShipIndex === 2) quad = Math.random() < 0.5 ? 3 : 4;
+                    else if (targetShipIndex === 4) quad = Math.random() < 0.5 ? 2 : 4;
+                    else quad = Math.floor(Math.random() * 4) + 1;
 
-                    if (quad === 1) {
-                        x = Math.floor(Math.random() * 4) + 1;
-                        y = Math.floor(Math.random() * 4) + 1;
-                    } else if (quad === 2) {
-                        x = -(Math.floor(Math.random() * 4) + 1);
-                        y = Math.floor(Math.random() * 4) + 1;
-                    } else if (quad === 3) {
-                        x = -(Math.floor(Math.random() * 4) + 1);
-                        y = -(Math.floor(Math.random() * 4) + 1);
-                    } else {
-                        x = Math.floor(Math.random() * 4) + 1;
-                        y = -(Math.floor(Math.random() * 4) + 1);
-                    }
+                    if (quad === 1) { x = Math.floor(Math.random() * 4) + 1; y = Math.floor(Math.random() * 4) + 1; }
+                    else if (quad === 2) { x = -(Math.floor(Math.random() * 4) + 1); y = Math.floor(Math.random() * 4) + 1; }
+                    else if (quad === 3) { x = -(Math.floor(Math.random() * 4) + 1); y = -(Math.floor(Math.random() * 4) + 1); }
+                    else { x = Math.floor(Math.random() * 4) + 1; y = -(Math.floor(Math.random() * 4) + 1); }
                 }
 
                 let quadClue = "";
                 if (isAxisProblem) {
-                    if (y === 0) {
-                        quadClue = Math.random() < 0.5 
-                            ? "y좌표가 0 이어서 [x축 위]에 놓여 어느 사분면에도 속하지 않는 경계 구역" 
-                            : `점 (${x}, 0)과 같이 [x축 위]에 위치하여 사분면이 없는 경계선`;
-                    } else {
-                        quadClue = Math.random() < 0.5 
-                            ? "x좌표가 0 이어서 [y축 위]에 놓여 어느 사분면에도 속하지 않는 경계 구역" 
-                            : `점 (0, ${y})과 같이 [y축 위]에 위치하여 사분면이 없는 경계선`;
-                    }
+                    quadClue = y === 0 ? "y좌표가 0 이어서 [x축 위]에 놓여 어느 사분면에도 속하지 않는 경계 구역" : `점 (0, ${y})과 같이 [y축 위]에 위치하여 사분면이 없는 경계선`;
                 } else {
-                    const signClueType = Math.floor(Math.random() * 4);
-                    if (signClueType === 0) {
-                        quadClue = (x > 0 && y > 0) ? "x > 0 이고 y > 0 (두 좌표 모두 양수)" :
-                                   (x < 0 && y > 0) ? "x < 0 이고 y > 0 (x는 음수, y는 양수)" :
-                                   (x < 0 && y < 0) ? "x < 0 이고 y < 0 (두 좌표 모두 음수)" : "x > 0 이고 y < 0 (x는 양수, y는 음수)";
-                    } else if (signClueType === 1) {
-                        quadClue = (x * y > 0) ? (x > 0 ? "곱 xy > 0 이며 합 x + y > 0" : "곱 xy > 0 이며 합 x + y < 0")
-                                               : (x > 0 ? "곱 xy < 0 이며 x > y" : "곱 xy < 0 이며 x < y");
-                    } else if (signClueType === 2) {
-                        quadClue = `x좌표와 y좌표의 부호가 순서대로 [ ${x > 0 ? '+' : '-'}, ${y > 0 ? '+' : '-'} ] 인 구역`;
-                    } else {
-                        const qNames = ["제1사분면", "제2사분면", "제3사분면", "제4사분면"];
-                        quadClue = `소나 음파 분석 결과, 적함이 [${qNames[quad - 1]}] 에 확실히 매복 중!`;
-                    }
+                    const qNames = ["제1사분면", "제2사분면", "제3사분면", "제4사분면"];
+                    quadClue = `소나 음파 분석 결과, 적함이 [${qNames[quad - 1]}] 에 확실히 매복 중!`;
                 }
 
-                let xClue = "";
-                if (x === 0) {
-                    xClue = "y축 위의 점이므로 x좌표는 0";
-                } else {
-                    const xClueType = Math.floor(Math.random() * 3);
-                    if (xClueType === 0) {
-                        xClue = `x좌표는 y축까지의 거리가 ${Math.abs(x)}인 ${x > 0 ? '양수' : '음수'}`;
-                    } else if (xClueType === 1) {
-                        xClue = `점 (${-x}, 0)을 y축에 대하여 대칭이동한 점의 x좌표`;
-                    } else {
-                        const base = x - 3;
-                        xClue = `일차방정식 x - (${base}) = 3 의 해`;
-                    }
-                }
-
-                let fnType = 'direct';
-                let yClue = "";
+                let xClue = x === 0 ? "y축 위의 점이므로 x좌표는 0" : `x좌표는 y축까지의 거리가 ${Math.abs(x)}인 ${x > 0 ? '양수' : '음수'}`;
+                let fnType = (targetShipIndex >= 4 || Math.random() < 0.5) ? 'inverse' : 'direct';
                 let fnExpr = "";
+                let yClue = "";
 
                 if (x === 0 || y === 0) {
                     fnType = 'direct';
                     fnExpr = y === 0 ? "y = 0x" : "x = 0";
-                    yClue = y === 0 ? "x축 위에 머물러 있으므로 y = 0" : `y축 상에서 원점과의 거리가 ${Math.abs(y)}인 ${y > 0 ? '양수' : '음수'}`;
+                    yClue = y === 0 ? "x축 위에 머물러 있으므로 y = 0" : `y축 상에서 원점과의 거리가 ${Math.abs(y)}인 좌표`;
                 } else {
-                    fnType = (targetShipIndex >= 4 || Math.random() < 0.5) ? 'inverse' : 'direct';
                     if (fnType === 'direct') {
                         if (y % x !== 0) continue;
                         const a = y / x;
-                        const aStr = a === 1 ? '' : (a === -1 ? '-' : `${a}`);
-                        fnExpr = `y = ${aStr}x`;
+                        fnExpr = `y = ${a === 1 ? '' : (a === -1 ? '-' : a)}x`;
                         yClue = `y좌표는 x와 정비례 관계식 [ ${fnExpr} ] 위의 점`;
                     } else {
                         const a = x * y;
@@ -666,12 +620,6 @@
                         fnExpr = `y = ${a} / x`;
                         yClue = `y좌표는 x와 반비례 관계식 [ y = ${a}/x ] 위의 점`;
                     }
-                }
-
-                let evasionType = null;
-                if (!isAxisProblem && targetShipIndex >= 2) {
-                    const evTypes = ['x_axis', 'y_axis', 'origin'];
-                    evasionType = evTypes[(targetShipIndex - 2) % evTypes.length];
                 }
 
                 const fullClue = `【음파 탐지】 ${quadClue}`;
@@ -693,8 +641,7 @@
                         yClue: yClue,
                         fnType: fnType,
                         fnExpr: fnExpr,
-                        fullClue: fullClue,
-                        evasionType: evasionType
+                        fullClue: fullClue
                     };
                     break;
                 }
@@ -706,13 +653,12 @@
                     targetY: 2,
                     targetQuadrant: 2,
                     isAxisProblem: false,
-                    quadClue: "x < 0 이고 y > 0 (x는 음수, y는 양수)",
+                    quadClue: "제2사분면에 확실히 매복 중!",
                     xClue: "y축까지의 거리가 3인 음수",
                     yClue: "반비례 관계식 [ y = -6/x ] 위의 점",
                     fnType: "inverse",
                     fnExpr: "y = -6/x",
-                    fullClue: "【음파 탐지】 x < 0 이고 y > 0 (x는 음수, y는 양수)",
-                    evasionType: "x_axis"
+                    fullClue: "【음파 탐지】 제2사분면에 확실히 매복 중!"
                 };
             }
             return mission;
@@ -726,7 +672,6 @@
             const lockoutBox = document.getElementById('lockout-penalty-box');
             const timerEl = document.getElementById('lockout-timer-num');
             lockoutBox.classList.remove('hidden');
-
             timerEl.innerText = '5.0';
 
             if (lockoutTimerInterval) clearInterval(lockoutTimerInterval);
@@ -755,18 +700,15 @@
                 const id = item.id || item.name;
                 const name = item.name || item.id || '대원';
                 const joinedAt = item.joinedAt || Date.now();
+                const lastSeen = item.lastSeen || Date.now();
                 
                 if (!map.has(id)) {
-                    map.set(id, { id, name, joinedAt });
+                    map.set(id, { id, name, joinedAt, lastSeen });
                 }
             });
             return Array.from(map.values()).sort((a, b) => 
                 (a.joinedAt || 0) !== (b.joinedAt || 0) ? (a.joinedAt || 0) - (b.joinedAt || 0) : a.name.localeCompare(b.name)
             );
-        }
-
-        function mergeMembers(listA = [], listB = []) {
-            return cleanMemberList([...(listA || []), ...(listB || [])]);
         }
 
         function getStageActorIndex(stage, teamSize, problemCount = 1) {
@@ -814,16 +756,18 @@
         }
 
         window.joinTeam = async function(team) {
-            const name = document.getElementById('player-name').value.trim() || `소나관_${Math.floor(Math.random()*900+100)}`;
-            const code = document.getElementById('room-code').value.trim() || 'sonar101';
+            const nameInput = document.getElementById('player-name');
+            const codeInput = document.getElementById('room-code');
+            const name = (nameInput ? nameInput.value.trim() : '') || `소나관_${Math.floor(Math.random()*900+100)}`;
+            const code = (codeInput ? codeInput.value.trim() : '') || 'sonar101';
 
             currentUserName = name;
             currentRoomCode = code;
             myTeam = team;
+            isActionProcessing = false;
 
-            const myMemberObj = { id: myPlayerId, name: currentUserName, joinedAt: myJoinedAt };
+            const myMemberObj = { id: myPlayerId, name: currentUserName, lastSeen: Date.now(), joinedAt: myJoinedAt };
 
-            // Zero-latency BroadcastChannel for peer communication
             try {
                 if (window.BroadcastChannel) {
                     if (bc) bc.close();
@@ -832,7 +776,9 @@
                         const msg = event.data;
                         if (!msg) return;
                         if (msg.type === 'LOCAL_PING' && msg.team === myTeam) {
-                            addTacticalPing(msg.coordX, msg.coordY, msg.sender);
+                            addTacticalPingCoords(msg.coordX, msg.coordY, msg.sender);
+                        } else if (msg.type === 'SYNC_STATE' && msg.payload) {
+                            applyRoomState(msg.payload);
                         }
                     };
                 }
@@ -848,9 +794,8 @@
             else initialData.redMembers = [myMemberObj];
             applyRoomState(initialData);
 
-            // One-time registration to Firestore root collection
             try {
-                if (!useFallback && db) {
+                if (db) {
                     const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
                     startFirestoreListener(roomRef);
 
@@ -880,6 +825,7 @@
             currentUserName = '교사 중계석';
             currentRoomCode = code;
             myTeam = 'spectator';
+            isActionProcessing = false;
 
             try {
                 if (window.BroadcastChannel) {
@@ -889,7 +835,7 @@
                         const msg = event.data;
                         if (!msg) return;
                         if (msg.type === 'LOCAL_PING') {
-                            addTacticalPing(msg.coordX, msg.coordY, msg.sender);
+                            addTacticalPingCoords(msg.coordX, msg.coordY, msg.sender);
                         } else if (msg.type === 'SYNC_STATE' && msg.payload) {
                             applyRoomState(msg.payload);
                         }
@@ -903,7 +849,7 @@
             sfx.victoryFanfare();
 
             try {
-                if (!useFallback && db) {
+                if (db) {
                     const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
                     startFirestoreListener(roomRef);
                     const snap = await getDoc(roomRef);
@@ -919,7 +865,7 @@
         };
 
         async function leaveRoomCleanup() {
-            if (!currentRoomCode || !myTeam || myTeam === 'spectator' || useFallback || !db) return;
+            if (!currentRoomCode || !myTeam || myTeam === 'spectator' || !db) return;
             try {
                 const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
                 const snap = await getDoc(roomRef);
@@ -935,12 +881,12 @@
         window.resetCurrentRoomData = async function() {
             const code = currentRoomCode || document.getElementById('room-code').value.trim() || 'sonar101';
             const fresh = createInitialRoomData();
-            const myMemberObj = { id: myPlayerId, name: currentUserName || '소나관', joinedAt: myJoinedAt };
+            const myMemberObj = { id: myPlayerId, name: currentUserName || '소나관', lastSeen: Date.now(), joinedAt: myJoinedAt };
             if (myTeam === 'blue') fresh.blueMembers = [myMemberObj];
             else if (myTeam === 'red') fresh.redMembers = [myMemberObj];
 
             try {
-                if (!useFallback && db) {
+                if (db) {
                     const roomRef = doc(db, 'stealth_sonar_rooms', code);
                     await setDoc(roomRef, fresh);
                 }
@@ -955,8 +901,7 @@
                 if (!snap.exists()) return;
                 applyRoomState(snap.data());
             }, (err) => {
-                console.warn("Sonar Snapshot error:", err);
-                useFallback = true;
+                console.warn("Snapshot error:", err);
             });
         }
 
@@ -979,8 +924,8 @@
 
             if (data.lastPing && (!window.lastObservedPingId || window.lastObservedPingId !== data.lastPing.id)) {
                 window.lastObservedPingId = data.lastPing.id;
-                if (data.lastPing.team === myTeam) {
-                    addTacticalPing(data.lastPing.coordX, data.lastPing.coordY, data.lastPing.sender);
+                if (myTeam === 'spectator' || data.lastPing.team === myTeam) {
+                    addTacticalPingCoords(data.lastPing.coordX, data.lastPing.coordY, data.lastPing.sender);
                 }
             }
 
@@ -1002,6 +947,11 @@
 
         async function syncStateUpdate(nextData) {
             applyRoomState(nextData);
+            if (bc) {
+                try {
+                    bc.postMessage({ type: 'SYNC_STATE', payload: nextData });
+                } catch (e) {}
+            }
             if (!useFallback && db) {
                 try {
                     const roomRef = doc(db, 'stealth_sonar_rooms', currentRoomCode);
@@ -1139,7 +1089,7 @@
                 teamBadge.className = 'text-xs px-3.5 py-1.5 bg-cyan-500/25 text-cyan-300 border border-cyan-400 rounded-full font-bold';
             } else {
                 teamBadge.innerText = `🔴 홍해 레드 헌터 [타겟 #${problemCount}]`;
-                teamBadge.className = 'text-xs px-3.5 py-1.5 bg-rose-500/25 text-rose-300 border border-rose-400 rounded-full font-bold';
+                teamBadge.className = 'text-xs px-3.5 py-1.5 bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-full font-bold';
             }
 
             const teamSize = Math.max(1, myMembers.length);
@@ -1172,6 +1122,7 @@
             const waitingNotice = document.getElementById('waiting-notice');
             const currentActorEl = document.getElementById('current-actor-name');
             const stepNumInput = document.getElementById('step-number-input');
+            const torpedoLaunchBtn = document.getElementById('torpedo-launch-btn');
 
             if (currentStage === 0) {
                 instEl.innerText = "【1단계: 사분면 색출】 부호 힌트를 분석하여 적 전함이 위치한 사분면 또는 축 버튼을 터치하세요!";
@@ -1185,6 +1136,11 @@
 
             if (isMyTurn) {
                 waitingNotice.classList.add('hidden');
+                isActionProcessing = false;
+                if (torpedoLaunchBtn) {
+                    torpedoLaunchBtn.disabled = false;
+                    torpedoLaunchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
                 if (currentStage === 0) {
                     numControls.classList.add('hidden');
                     torpedoControls.classList.add('hidden');
@@ -1238,7 +1194,7 @@
         }
 
         window.submitQuadrantStep = async function(chosenQuad) {
-            if (isLockedOut) return;
+            if (isActionProcessing) return;
             if (!lastKnownRoomData) return;
             const data = lastKnownRoomData;
             const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
@@ -1247,6 +1203,7 @@
             if (currentStage !== 0) return;
 
             if (chosenQuad === mission.targetQuadrant) {
+                isActionProcessing = true;
                 sfx.success();
                 const nextData = { ...data };
                 if (myTeam === 'blue') {
@@ -1261,6 +1218,7 @@
                     : `✨ [제${chosenQuad}사분면 색출 성공!] 소나 탐지망 집중! 2번 대원 X축 조준 개시!`;
                 showStepFeedback(feedbackText, false);
                 nextData.updatedAt = Date.now();
+                isActionProcessing = false;
                 await syncStateUpdate(nextData);
             } else {
                 showStepFeedback("❌ 사분면 판정 오류! (찍기 방지 5초 조준 잠금 발동)", true);
@@ -1269,7 +1227,7 @@
         };
 
         window.submitCoordinateStep = async function() {
-            if (isLockedOut) return;
+            if (isActionProcessing) return;
             if (!lastKnownRoomData) return;
             const inputEl = document.getElementById('step-number-input');
             const val = parseFloat(inputEl.value.trim());
@@ -1286,6 +1244,7 @@
 
             if (currentStage === 1) {
                 if (val === mission.targetX) {
+                    isActionProcessing = true;
                     sfx.success();
                     const nextData = { ...data };
                     if (myTeam === 'blue') {
@@ -1297,6 +1256,7 @@
                     }
                     showStepFeedback(`🎯 [X축 조준 성공: x = ${val}] 세로 유도선 고정! 3번 대원 관계식 Y좌표 유도 개시!`, false);
                     nextData.updatedAt = Date.now();
+                    isActionProcessing = false;
                     await syncStateUpdate(nextData);
                 } else {
                     showStepFeedback("❌ X좌표 불일치! 거리·대칭 계산 오류! (5초 조준 잠금)", true);
@@ -1304,6 +1264,7 @@
                 }
             } else if (currentStage === 2) {
                 if (val === mission.targetY) {
+                    isActionProcessing = true;
                     sfx.success();
                     const nextData = { ...data };
                     if (myTeam === 'blue') {
@@ -1315,6 +1276,7 @@
                     }
                     showStepFeedback(`🎯 [Y축 교차 성공: (${mission.targetX}, ${val})] 락온 완료! 4번 대원 어뢰를 투하하세요!`, false);
                     nextData.updatedAt = Date.now();
+                    isActionProcessing = false;
                     await syncStateUpdate(nextData);
                 } else {
                     showStepFeedback(`❌ Y좌표 불일치! 관계식(${mission.fnExpr})에 x=${mission.targetX} 대입 오류! (5초 조준 잠금)`, true);
@@ -1324,7 +1286,7 @@
         };
 
         window.launchTorpedoStep = async function() {
-            if (isLockedOut) return;
+            if (isActionProcessing) return;
             if (!lastKnownRoomData) return;
             const data = lastKnownRoomData;
             const currentStage = myTeam === 'blue' ? (data.blueStage || 0) : (data.redStage || 0);
@@ -1332,13 +1294,13 @@
 
             if (currentStage !== 3) return;
 
-            if (mission.evasionType && !window.evasionHandledThisTurn) {
-                window.evasionHandledThisTurn = true;
-                openSymmetryModal(mission);
-                return;
+            isActionProcessing = true;
+            const torpedoLaunchBtn = document.getElementById('torpedo-launch-btn');
+            if (torpedoLaunchBtn) {
+                torpedoLaunchBtn.disabled = true;
+                torpedoLaunchBtn.classList.add('opacity-50', 'cursor-not-allowed');
             }
 
-            window.evasionHandledThisTurn = false;
             sfx.torpedoLaunch();
             showStepFeedback("🚀 어뢰 투하! 깊은 바다를 가르며 함수 궤적을 타고 적 스텔스 전함으로 돌진합니다!", false);
 
@@ -1382,70 +1344,12 @@
                 sfx.shipExplosion();
                 showStepFeedback("💥 [DIRECT HIT!] 적 전함 격침 성공! 다음 타겟으로 소나를 회전합니다! (역할 자동 순환)", false);
                 hitData.updatedAt = Date.now();
+                isActionProcessing = false;
                 await syncStateUpdate(hitData);
             }, 1400);
 
             nextData.updatedAt = Date.now();
             await syncStateUpdate(nextData);
-        };
-
-        let currentEvasionExpectedX = 0;
-        let currentEvasionExpectedY = 0;
-
-        function openSymmetryModal(mission) {
-            sfx.error();
-            const instEl = document.getElementById('symmetry-instruction');
-            const targetEl = document.getElementById('symmetry-target-display');
-            const symModal = document.getElementById('symmetry-modal');
-
-            targetEl.innerText = `기존 조준 좌표: (${mission.targetX}, ${mission.targetY})`;
-
-            let evasionDesc = "";
-            if (mission.evasionType === 'x_axis') {
-                evasionDesc = "적함이 [x축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (x, -y) 공식으로 수정 좌표를 입력하세요!";
-                currentEvasionExpectedX = mission.targetX;
-                currentEvasionExpectedY = -mission.targetY;
-            } else if (mission.evasionType === 'y_axis') {
-                evasionDesc = "적함이 [y축]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, y) 공식으로 수정 좌표를 입력하세요!";
-                currentEvasionExpectedX = -mission.targetX;
-                currentEvasionExpectedY = mission.targetY;
-            } else {
-                evasionDesc = "적함이 [원점(O)]에 대하여 대칭 기동을 감행했습니다! (x, y) ➔ (-x, -y) 공식으로 수정 좌표를 입력하세요!";
-                currentEvasionExpectedX = -mission.targetX;
-                currentEvasionExpectedY = -mission.targetY;
-            }
-
-            instEl.innerText = evasionDesc;
-            document.getElementById('sym-x-input').value = '';
-            document.getElementById('sym-y-input').value = '';
-            symModal.classList.remove('hidden');
-        }
-
-        window.submitSymmetryCorrection = function() {
-            const inputX = parseFloat(document.getElementById('sym-x-input').value.trim());
-            const inputY = parseFloat(document.getElementById('sym-y-input').value.trim());
-
-            if (isNaN(inputX) || isNaN(inputY)) {
-                sfx.error();
-                return;
-            }
-
-            if (inputX === currentEvasionExpectedX && inputY === currentEvasionExpectedY) {
-                sfx.success();
-                document.getElementById('symmetry-modal').classList.add('hidden');
-                showStepFeedback(`🎯 [대칭 회피 격파!] 수정 좌표 (${inputX}, ${inputY}) 추적 완료! 어뢰를 발사합니다!`, false);
-                
-                const mission = myTeam === 'blue' ? lastKnownRoomData.blueMission : lastKnownRoomData.redMission;
-                mission.targetX = currentEvasionExpectedX;
-                mission.targetY = currentEvasionExpectedY;
-                mission.evasionType = null;
-                
-                window.launchTorpedoStep();
-            } else {
-                sfx.error();
-                showStepFeedback("❌ 대칭이동 부호 계산 오류! x축 대칭: (x, -y) / y축 대칭: (-x, y) / 원점: (-x, -y)", true);
-                triggerLockoutPenalty();
-            }
         };
 
         function showStepFeedback(text, isError) {
@@ -1464,7 +1368,6 @@
         window.showCustomModal = function(title, msg) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-body').innerText = msg;
-            document.getElementById('custom-modal').classList.add('hidden');
             document.getElementById('custom-modal').classList.remove('hidden');
         };
 
@@ -1496,6 +1399,7 @@
 
         function initRadarCanvas() {
             canvas = document.getElementById('radar-canvas');
+            if (!canvas) return;
             ctx = canvas.getContext('2d');
             resizeRadarCanvas();
             window.addEventListener('resize', resizeRadarCanvas);
@@ -1539,14 +1443,12 @@
                 sfx.tacticalPing();
                 addTacticalPing(mathX, mathY, currentUserName || '대원');
                 
-                // Zero-cost broadcast to other local tabs
                 if (bc) {
                     try {
                         bc.postMessage({ type: 'LOCAL_PING', team: myTeam, coordX: mathX, coordY: mathY, sender: currentUserName || '대원' });
                     } catch (e) {}
                 }
 
-                // Throttled Firestore ping (max once every 2.5s)
                 const now = Date.now();
                 if (now - lastPingSentTime > 2500 && lastKnownRoomData) {
                     lastPingSentTime = now;
@@ -1601,7 +1503,7 @@
         }
 
         function renderRadarLoop() {
-            if (!ctx) return;
+            if (!ctx || !canvas) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const w = canvas.width;
@@ -1611,7 +1513,6 @@
             const maxR = Math.min(w, h) * 0.46;
             const scale = maxR / 5.2;
 
-            // 1. Radar Circular Background
             ctx.save();
             ctx.fillStyle = '#01151a';
             ctx.beginPath();
@@ -1621,7 +1522,6 @@
             ctx.lineWidth = 3;
             ctx.stroke();
 
-            // Concentric Range Rings (1, 2, 3, 4, 5)
             ctx.strokeStyle = 'rgba(20, 184, 166, 0.25)';
             ctx.lineWidth = 1;
             for (let r = 1; r <= 5; r++) {
@@ -1630,46 +1530,38 @@
                 ctx.stroke();
             }
 
-            // Quadrant Background Shading & Labels
-            ctx.font = 'bold 13px font-sonar, sans-serif';
+            ctx.font = 'bold 13px sans-serif';
             ctx.fillStyle = 'rgba(45, 212, 191, 0.25)';
             ctx.fillText("제2사분면 (-, +)", cx - maxR * 0.55, cy - maxR * 0.5);
             ctx.fillText("제1사분면 (+, +)", cx + maxR * 0.2, cy - maxR * 0.5);
             ctx.fillText("제3사분면 (-, -)", cx - maxR * 0.55, cy + maxR * 0.6);
             ctx.fillText("제4사분면 (+, -)", cx + maxR * 0.2, cy + maxR * 0.6);
 
-            // 2. Coordinate Grid Lines (-5 to 5)
             ctx.strokeStyle = 'rgba(20, 184, 166, 0.12)';
             ctx.lineWidth = 1;
             for (let i = -5; i <= 5; i++) {
                 if (i === 0) continue;
-                // Vertical grid
                 ctx.beginPath();
                 ctx.moveTo(cx + i * scale, cy - maxR);
                 ctx.lineTo(cx + i * scale, cy + maxR);
                 ctx.stroke();
-                // Horizontal grid
                 ctx.beginPath();
                 ctx.moveTo(cx - maxR, cy - i * scale);
                 ctx.lineTo(cx + maxR, cy - i * scale);
                 ctx.stroke();
             }
 
-            // 3. Thick Main Coordinate Axes: X & Y
             ctx.strokeStyle = '#2dd4bf';
             ctx.lineWidth = 2.5;
-            // X-Axis
             ctx.beginPath();
             ctx.moveTo(cx - maxR, cy);
             ctx.lineTo(cx + maxR, cy);
             ctx.stroke();
-            // Y-Axis
             ctx.beginPath();
             ctx.moveTo(cx, cy - maxR);
             ctx.lineTo(cx, cy + maxR);
             ctx.stroke();
 
-            // Coordinate Axis Numbers
             ctx.font = 'bold 10px monospace';
             ctx.fillStyle = '#5eead4';
             ctx.textAlign = 'center';
@@ -1683,7 +1575,6 @@
             ctx.fillText("x", cx + maxR - 8, cy - 10);
             ctx.fillText("y", cx + 10, cy - maxR + 10);
 
-            // 4. Rotating Sonar Sweep Beam
             radarSweepAngle += 0.025;
             const sweepGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
             sweepGrad.addColorStop(0, 'rgba(20, 184, 166, 0.4)');
@@ -1697,7 +1588,6 @@
             ctx.fillStyle = sweepGrad;
             ctx.fill();
 
-            // Leading bright sweep line
             ctx.strokeStyle = '#5eead4';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -1706,7 +1596,6 @@
             ctx.stroke();
             ctx.restore();
 
-            // 5. Draw Active Team Guidelines & Function Curves
             if (lastKnownRoomData) {
                 const data = lastKnownRoomData;
                 const mission = myTeam === 'blue' ? data.blueMission : data.redMission;
@@ -1715,7 +1604,6 @@
                 drawTeamCrosshair(crosshair, myTeam, cx, cy, scale, mission, currentStage);
             }
 
-            // 6. Draw & Update Tactical Pings
             for (let i = tacticalPings.length - 1; i >= 0; i--) {
                 const p = tacticalPings[i];
                 p.radius += 0.8;
@@ -1732,7 +1620,7 @@
                 ctx.stroke();
 
                 ctx.fillStyle = `rgba(254, 240, 138, ${p.alpha})`;
-                ctx.font = 'bold 11px font-sonar, sans-serif';
+                ctx.font = 'bold 11px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(`📍 ${p.sender}`, px, py - p.radius - 4);
                 ctx.restore();
@@ -1740,7 +1628,6 @@
                 if (p.alpha <= 0) tacticalPings.splice(i, 1);
             }
 
-            // 7. Draw & Update Torpedo Flight Animation
             for (let i = torpedoProjectiles.length - 1; i >= 0; i--) {
                 const torp = torpedoProjectiles[i];
                 torp.progress += 0.035;
@@ -1768,7 +1655,6 @@
                 if (torp.progress >= 1) torpedoProjectiles.splice(i, 1);
             }
 
-            // 8. Draw & Update Explosion Sparks
             for (let i = explosions.length - 1; i >= 0; i--) {
                 const exp = explosions[i];
                 exp.mathX += exp.vx * 0.01;
@@ -1840,7 +1726,7 @@
                 }
                 ctx.stroke();
 
-                ctx.font = 'bold 11px font-mono, monospace';
+                ctx.font = 'bold 11px monospace';
                 ctx.fillStyle = isBlue ? '#7dd3fc' : '#fda4af';
                 ctx.fillText(`궤적: ${mission.fnExpr}`, cx + mission.targetX * scale + 14, cy - mission.targetY * scale + 16);
                 ctx.restore();
@@ -1885,7 +1771,7 @@
                 ctx.lineTo(px, py + 18);
                 ctx.stroke();
 
-                ctx.font = 'bold 11px font-mono, monospace';
+                ctx.font = 'bold 11px monospace';
                 ctx.fillStyle = '#fef08a';
                 ctx.textAlign = 'left';
                 ctx.fillText(`LOCK: (${crosshair.x}, ${crosshair.y})`, px + 16, py - 10);
