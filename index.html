@@ -1286,6 +1286,7 @@
         };
 
         window.launchTorpedoStep = async function() {
+            // ★ [연타 방지 가드] 이미 발사 중이면 추가 클릭 원천 차단
             if (isActionProcessing) return;
             if (!lastKnownRoomData) return;
             const data = lastKnownRoomData;
@@ -1300,6 +1301,7 @@
                 return;
             }
 
+            // 즉시 락 설정 및 버튼 비활성화
             isActionProcessing = true;
             window.evasionHandledThisTurn = false;
             const torpedoLaunchBtn = document.getElementById('torpedo-launch-btn');
@@ -1351,6 +1353,8 @@
                 sfx.shipExplosion();
                 showStepFeedback("💥 [DIRECT HIT!] 적 전함 격침 성공! 다음 타겟으로 소나를 회전합니다! (역할 자동 순환)", false);
                 hitData.updatedAt = Date.now();
+                
+                // 작업 완료 후 락 해제
                 isActionProcessing = false;
                 await syncStateUpdate(hitData);
             }, 1400);
